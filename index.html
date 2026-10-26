@@ -201,7 +201,8 @@
           </button>
         </div>
 
-        <div id="campsList" class="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4"></div>
+        <!-- Renamed ID to avoid collision with let campsList -->
+        <div id="campsContainer" class="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4"></div>
         
         <div id="emptyCampsNotice" class="hidden p-8 text-center text-slate-400 text-sm bg-slate-900/40 rounded-xl border border-slate-800 space-y-3">
           <p>Слёты пока не созданы.</p>
@@ -252,9 +253,10 @@
     </div>
   </div>
 
-  <!-- MODAL: STEP 2 OF EVALUATION -->
+  <!-- MODAL: STEP 2 OF EVALUATION (С ПОЛНОЦЕННОЙ ПАНЕЛЬЮ 360°) -->
   <div id="evalModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 hidden">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-3xl w-full flex flex-col max-h-[94vh] shadow-2xl overflow-hidden">
+      <!-- Fixed Sticky Header -->
       <div class="flex justify-between items-center px-4 sm:px-6 py-3 border-b border-slate-700 bg-slate-800 flex-shrink-0 z-10">
         <div class="flex items-center gap-2">
           <button onclick="backToStep1Selection()" class="p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white transition" title="Вернуться к выбору слёта">
@@ -275,9 +277,11 @@
         </div>
       </div>
 
+      <!-- Scrollable Form Body -->
       <div class="overflow-y-auto touch-scroll p-4 sm:p-6 space-y-4 sm:space-y-5 flex-1">
         <form id="evalWizardForm" onsubmit="saveEvaluation(event)" class="space-y-4 sm:space-y-5">
           
+          <!-- Summary Bar -->
           <div class="bg-slate-900/70 border border-slate-700/60 p-3 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs">
             <div class="flex items-center gap-2">
               <span class="text-slate-400">Слёт:</span>
@@ -306,18 +310,58 @@
             </div>
           </div>
 
-          <div class="flex items-center justify-between p-3 rounded-xl bg-indigo-950/40 border border-indigo-500/30">
-            <div class="flex items-center gap-2.5">
-              <i data-lucide="layers" class="text-indigo-400 w-5 h-5 flex-shrink-0"></i>
-              <div>
-                <div class="text-xs sm:text-sm font-bold text-white">Режим 360° (Куратор 45% + Напарник 30% + Дети 25%)</div>
-                <div class="text-[11px] text-slate-400">Взвешивание оценок для защиты от предвзятости</div>
+          <!-- 360° Toggle Block -->
+          <div class="p-3.5 rounded-xl bg-indigo-950/40 border border-indigo-500/30 space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2.5">
+                <i data-lucide="layers" class="text-indigo-400 w-5 h-5 flex-shrink-0"></i>
+                <div>
+                  <div class="text-xs sm:text-sm font-bold text-white">Режим 360° (Куратор 45% + Напарник 30% + Отряд 25%)</div>
+                  <div class="text-[11px] text-slate-400">Взвешивание оценок от 3 сторон для исключения предвзятости</div>
+                </div>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                <input type="checkbox" id="eval360Mode" onchange="toggle360Panel()" class="sr-only peer">
+                <div class="w-10 h-5 bg-slate-700 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+              </label>
+            </div>
+
+            <!-- Expandable 360 Controls Panel -->
+            <div id="panel360Controls" class="hidden pt-3 border-t border-indigo-500/20 space-y-3">
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <!-- Source 1: Curator -->
+                <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-700/80 space-y-1">
+                  <div class="flex justify-between items-center text-xs">
+                    <span class="text-slate-300 font-semibold">1. Куратор (45%)</span>
+                    <span id="val_360_curator" class="font-bold text-indigo-400">4.1</span>
+                  </div>
+                  <div class="text-[10px] text-slate-400">Считается по 6 векторам ниже</div>
+                  <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-2">
+                    <div id="bar_360_curator" class="bg-indigo-500 h-full w-[80%] transition-all"></div>
+                  </div>
+                </div>
+
+                <!-- Source 2: Partner -->
+                <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-700/80 space-y-1">
+                  <div class="flex justify-between items-center text-xs">
+                    <span class="text-slate-300 font-semibold">2. Напарник (30%)</span>
+                    <span id="val_360_partner" class="font-bold text-purple-400">4.0</span>
+                  </div>
+                  <input type="range" id="slider_360_partner" min="1" max="5" step="0.1" value="4.0" oninput="calculateWizardScore()" class="w-full accent-purple-500 cursor-pointer">
+                  <div class="text-[10px] text-slate-500">Доверие, подстраховка в паре</div>
+                </div>
+
+                <!-- Source 3: Squad / Children -->
+                <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-700/80 space-y-1">
+                  <div class="flex justify-between items-center text-xs">
+                    <span class="text-slate-300 font-semibold">3. Отряд / Дети (25%)</span>
+                    <span id="val_360_squad" class="font-bold text-emerald-400">4.5</span>
+                  </div>
+                  <input type="range" id="slider_360_squad" min="1" max="5" step="0.1" value="4.5" oninput="calculateWizardScore()" class="w-full accent-emerald-500 cursor-pointer">
+                  <div class="text-[10px] text-slate-500">Вовлечение, климат, отзывы</div>
+                </div>
               </div>
             </div>
-            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
-              <input type="checkbox" id="eval360Mode" onchange="calculateWizardScore()" class="sr-only peer">
-              <div class="w-10 h-5 bg-slate-700 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
-            </label>
           </div>
 
           <!-- 6 Vector Sliders -->
@@ -771,8 +815,88 @@
 
     window.addEventListener('DOMContentLoaded', () => {
       lucide.createIcons();
-      initFirebase();
+      initStorageAndFirebase();
     });
+
+    /* ================= DUAL STORAGE & FIREBASE INIT ================= */
+    function safeStorageGet(key, defaultVal) {
+      try {
+        const item = localStorage.getItem(key);
+        return item ? JSON.parse(item) : defaultVal;
+      } catch (e) {
+        return defaultVal;
+      }
+    }
+
+    function safeStorageSet(key, val) {
+      try {
+        localStorage.setItem(key, JSON.stringify(val));
+      } catch (e) {}
+    }
+
+    function initStorageAndFirebase() {
+      // 1. Немедленно подгружаем данные из локального кэша, чтобы они никогда не пропадали
+      staffList = safeStorageGet('cm_cached_staff', []);
+      campsList = safeStorageGet('cm_cached_camps', []);
+      evaluationsList = safeStorageGet('cm_cached_evals', []);
+      updateAllViews();
+
+      // 2. Подключаем Firestore для облачной синхронизации
+      try {
+        if (!firebase.apps.length) {
+          firebase.initializeApp(FIREBASE_CONFIG);
+        }
+        db = firebase.firestore();
+
+        document.getElementById('cloudStatusText').textContent = 'Cloud Firestore';
+        document.getElementById('cloudStatus').className = 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-emerald-950/60 text-emerald-300 border border-emerald-500/40';
+        document.getElementById('cloudStatusDot').className = 'w-2 h-2 rounded-full bg-emerald-400';
+
+        subscribeToFirestoreCollections();
+      } catch (err) {
+        console.warn("Firebase Init Error (работаем в локальном режиме):", err);
+        document.getElementById('cloudStatusText').textContent = 'Локальный режим';
+        document.getElementById('cloudStatusDot').className = 'w-2 h-2 rounded-full bg-amber-400';
+      }
+    }
+
+    function subscribeToFirestoreCollections() {
+      db.collection('camps').onSnapshot(snap => {
+        const remoteCamps = [];
+        snap.forEach(doc => remoteCamps.push({ id: doc.id, ...doc.data() }));
+        if (remoteCamps.length > 0 || campsList.length === 0) {
+          campsList = remoteCamps;
+          safeStorageSet('cm_cached_camps', campsList);
+        }
+        updateAllViews();
+        if (activeRosterCampId) renderRosterModalContent(activeRosterCampId);
+      }, err => console.warn("Camps snapshot error", err));
+
+      db.collection('staff').onSnapshot(snap => {
+        const remoteStaff = [];
+        snap.forEach(doc => remoteStaff.push({ id: doc.id, ...doc.data() }));
+        if (remoteStaff.length > 0 || staffList.length === 0) {
+          staffList = remoteStaff;
+          safeStorageSet('cm_cached_staff', staffList);
+        }
+        updateAllViews();
+        if (activeRosterCampId) renderRosterModalContent(activeRosterCampId);
+      }, err => console.warn("Staff snapshot error", err));
+
+      db.collection('evaluations').onSnapshot(snap => {
+        const remoteEvals = [];
+        snap.forEach(doc => remoteEvals.push({ id: doc.id, ...doc.data() }));
+        if (remoteEvals.length > 0 || evaluationsList.length === 0) {
+          evaluationsList = remoteEvals;
+          safeStorageSet('cm_cached_evals', evaluationsList);
+        }
+        updateAllViews();
+        if (activeRosterCampId) renderRosterModalContent(activeRosterCampId);
+        if (!document.getElementById('evalSelectModal').classList.contains('hidden')) {
+          checkStep1EvaluationStatus();
+        }
+      }, err => console.warn("Evaluations snapshot error", err));
+    }
 
     /* ================= TOAST NOTIFICATIONS & CONFIRM DIALOG ================= */
     function showToast(message, type = 'success') {
@@ -897,53 +1021,6 @@
       return { name, tel };
     }
 
-    /* ================= FIREBASE INIT ================= */
-    function initFirebase() {
-      try {
-        if (!firebase.apps.length) {
-          firebase.initializeApp(FIREBASE_CONFIG);
-        }
-        db = firebase.firestore();
-
-        document.getElementById('cloudStatusText').textContent = 'Cloud Firestore';
-        document.getElementById('cloudStatus').className = 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-emerald-950/60 text-emerald-300 border border-emerald-500/40';
-        document.getElementById('cloudStatusDot').className = 'w-2 h-2 rounded-full bg-emerald-400';
-
-        subscribeToFirestoreCollections();
-      } catch (err) {
-        console.error("Firebase Init Error:", err);
-        document.getElementById('cloudStatusText').textContent = 'Ошибка БД';
-        document.getElementById('cloudStatusDot').className = 'w-2 h-2 rounded-full bg-rose-500';
-        showToast("Ошибка подключения к базе: " + err.message, "error");
-      }
-    }
-
-    function subscribeToFirestoreCollections() {
-      db.collection('camps').onSnapshot(snap => {
-        campsList = [];
-        snap.forEach(doc => campsList.push({ id: doc.id, ...doc.data() }));
-        updateAllViews();
-        if (activeRosterCampId) renderRosterModalContent(activeRosterCampId);
-      }, err => console.warn("Camps snapshot error", err));
-
-      db.collection('staff').onSnapshot(snap => {
-        staffList = [];
-        snap.forEach(doc => staffList.push({ id: doc.id, ...doc.data() }));
-        updateAllViews();
-        if (activeRosterCampId) renderRosterModalContent(activeRosterCampId);
-      }, err => console.warn("Staff snapshot error", err));
-
-      db.collection('evaluations').onSnapshot(snap => {
-        evaluationsList = [];
-        snap.forEach(doc => evaluationsList.push({ id: doc.id, ...doc.data() }));
-        updateAllViews();
-        if (activeRosterCampId) renderRosterModalContent(activeRosterCampId);
-        if (!document.getElementById('evalSelectModal').classList.contains('hidden')) {
-          checkStep1EvaluationStatus();
-        }
-      }, err => console.warn("Evaluations snapshot error", err));
-    }
-
     /* ================= TABS ================= */
     function switchTab(tabId) {
       document.querySelectorAll('main > section').forEach(sec => sec.classList.add('hidden'));
@@ -991,7 +1068,7 @@
           const eYear = e.getFullYear();
 
           if (sYear === eYear && sMonth === eMonth) {
-            return `${sDay}–${eDay} ${eMonth} ${eYear}`;
+            return `${sDay}–${eDay} ${eMonth} ${sYear}`;
           } else if (sYear === eYear) {
             return `${sDay} ${sMonth} – ${eDay} ${eMonth} ${eYear}`;
           } else {
@@ -1348,6 +1425,92 @@
       });
     }
 
+    /* ================= CAMPS LIST (FIXED CONTAINER ID) ================= */
+    function renderCampsList() {
+      const container = document.getElementById('campsContainer');
+      const emptyNotice = document.getElementById('emptyCampsNotice');
+      if (!container) return;
+
+      container.innerHTML = '';
+
+      if (campsList.length === 0) {
+        if (emptyNotice) emptyNotice.classList.remove('hidden');
+        container.classList.add('hidden');
+        return;
+      }
+      
+      if (emptyNotice) emptyNotice.classList.add('hidden');
+      container.classList.remove('hidden');
+
+      const sortedCamps = [...campsList].sort((a, b) => {
+        const timeA = a.startDate ? new Date(a.startDate).getTime() : (a.createdAt || 0);
+        const timeB = b.startDate ? new Date(b.startDate).getTime() : (b.createdAt || 0);
+        return timeB - timeA;
+      });
+
+      sortedCamps.forEach(c => {
+        const rosterCount = (Array.isArray(c.roster) ? c.roster : []).length;
+        const campEvals = getCampEvaluations(c.id);
+        const evalsCount = campEvals.length;
+        
+        let avgScore = '—';
+        if (campEvals.length > 0) {
+          const sum = campEvals.reduce((acc, curr) => acc + curr.finalScore, 0);
+          avgScore = (sum / campEvals.length).toFixed(2);
+        }
+
+        const dateRangeStr = formatCampDateRange(c);
+
+        const card = document.createElement('div');
+        card.className = 'bg-slate-800/80 border border-slate-700/60 p-3.5 sm:p-4 rounded-xl flex flex-col justify-between gap-3 shadow-sm hover:border-slate-600 transition';
+        card.innerHTML = `
+          <div>
+            <div class="flex items-start justify-between gap-2">
+              <div class="font-bold text-white text-sm sm:text-base leading-tight">${c.name || 'Слёт без названия'}</div>
+              <div class="flex items-center gap-1 flex-shrink-0">
+                <button onclick="openCampModal('${c.id}')" class="p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition" title="Редактировать слёт">
+                  <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                </button>
+                <button onclick="deleteCamp('${c.id}')" class="p-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900 text-rose-400 border border-rose-800/40 transition" title="Удалить слёт">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </div>
+            
+            <div class="text-[11px] text-slate-400 mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+              <span class="flex items-center gap-1">📍 ${c.location || 'Локация не указана'}</span>
+              <span class="flex items-center gap-1 text-indigo-300">📅 ${dateRangeStr}</span>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-2 mt-3 pt-2.5 border-t border-slate-700/60 text-xs">
+              <div class="flex items-center gap-3">
+                <span class="text-indigo-400 font-semibold flex items-center gap-1">
+                  <i data-lucide="users" class="w-3.5 h-3.5"></i> Состав: ${rosterCount}
+                </span>
+                <span class="text-emerald-400 font-semibold flex items-center gap-1">
+                  <i data-lucide="award" class="w-3.5 h-3.5"></i> Оценено: ${evalsCount}
+                </span>
+              </div>
+              <span class="text-amber-300 font-bold ml-auto">
+                Средний K: ${avgScore}
+              </span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <button onclick="openRosterModal('${c.id}')" class="py-2 px-2 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 border border-indigo-500/30">
+              <i data-lucide="users" class="w-3.5 h-3.5"></i> Состав (${rosterCount})
+            </button>
+            <button onclick="viewCampDossier('${c.id}')" class="py-2 px-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5">
+              <i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i> Досье слёта
+            </button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+      lucide.createIcons();
+    }
+
     /* ================= 2-STEP EVALUATION WORKFLOW ================= */
     function startEvaluationFlow(campId = null, staffId = null) {
       if (campsList.length === 0) {
@@ -1427,6 +1590,18 @@
       lucide.createIcons();
     }
 
+    function toggle360Panel() {
+      const is360 = document.getElementById('eval360Mode').checked;
+      const panel = document.getElementById('panel360Controls');
+      if (is360) {
+        panel.classList.remove('hidden');
+      } else {
+        panel.classList.add('hidden');
+      }
+      calculateWizardScore();
+      lucide.createIcons();
+    }
+
     function proceedToEvaluationFields() {
       evalSessionCampId = document.getElementById('step1CampSelect').value;
       evalSessionStaffId = document.getElementById('step1StaffSelect').value;
@@ -1474,8 +1649,16 @@
         document.getElementById('penLate').checked = !!existing.penalties?.late;
         document.getElementById('penDisrupt').checked = !!existing.penalties?.disrupt;
         document.getElementById('stopFactor').checked = !!existing.isStop;
-        document.getElementById('eval360Mode').checked = !!existing.is360;
 
+        // 360 Mode restore
+        const is360 = !!existing.is360;
+        document.getElementById('eval360Mode').checked = is360;
+        if (existing.eval360) {
+          document.getElementById('slider_360_partner').value = existing.eval360.partnerScore ?? 4.0;
+          document.getElementById('slider_360_squad').value = existing.eval360.squadScore ?? 4.5;
+        }
+
+        toggle360Panel();
         showToast("Существующие оценки успешно подгружены", "info");
       } else {
         evalSessionExistingDocId = null;
@@ -1499,7 +1682,11 @@
         document.getElementById('penLate').checked = false;
         document.getElementById('penDisrupt').checked = false;
         document.getElementById('stopFactor').checked = false;
+        
         document.getElementById('eval360Mode').checked = false;
+        document.getElementById('slider_360_partner').value = 4.0;
+        document.getElementById('slider_360_squad').value = 4.5;
+        toggle360Panel();
       }
 
       calculateWizardScore();
@@ -1524,14 +1711,19 @@
         message: "Оценка за этот слёт будет удалена, а общий K и счётчик «Оценено» пересчитаны.",
         confirmText: "Да, удалить",
         onConfirm: () => {
-          db.collection('evaluations').doc(evalId).delete().then(() => {
-            showToast("Оценка успешно удалена", "info");
-            closeEvaluationModal();
-            updateAllViews();
-            if (activeRosterCampId) renderRosterModalContent(activeRosterCampId);
-          }).catch(err => {
-            showToast("Ошибка удаления: " + err.message, "error");
-          });
+          // Удаляем из локального стейта
+          evaluationsList = evaluationsList.filter(e => e.id !== evalId);
+          safeStorageSet('cm_cached_evals', evaluationsList);
+
+          // Удаляем из Firestore
+          if (db) {
+            db.collection('evaluations').doc(evalId).delete().catch(err => console.warn(err));
+          }
+
+          showToast("Оценка успешно удалена", "info");
+          closeEvaluationModal();
+          updateAllViews();
+          if (activeRosterCampId) renderRosterModalContent(activeRosterCampId);
         }
       });
     }
@@ -1561,6 +1753,11 @@
       document.getElementById('val_F').textContent = F.toFixed(1);
       document.getElementById('val_L').textContent = L.toFixed(1);
 
+      // Балл куратора по 6 векторам роли
+      const curatorBaseScore = (D * roleInfo.D) + (A * roleInfo.A) + (S * roleInfo.S) + (T * roleInfo.T) + (F * roleInfo.F) + (L * roleInfo.L);
+      document.getElementById('val_360_curator').textContent = curatorBaseScore.toFixed(2);
+      document.getElementById('bar_360_curator').style.width = `${Math.min(100, (curatorBaseScore / 5) * 100)}%`;
+
       const isStop = document.getElementById('stopFactor').checked;
       if (isStop) {
         document.getElementById('wizardKResult').textContent = "0.00";
@@ -1570,10 +1767,19 @@
         return;
       }
 
-      let baseScore = (D * roleInfo.D) + (A * roleInfo.A) + (S * roleInfo.S) + (T * roleInfo.T) + (F * roleInfo.F) + (L * roleInfo.L);
+      let baseScore = curatorBaseScore;
 
-      if (document.getElementById('eval360Mode').checked) {
-        baseScore = (baseScore * 0.45) + (baseScore * 1.02 * 0.30) + (baseScore * 0.98 * 0.25);
+      // Полноценный расчёт 360° при включении
+      const is360 = document.getElementById('eval360Mode').checked;
+      if (is360) {
+        const partnerScore = parseFloat(document.getElementById('slider_360_partner').value);
+        const squadScore = parseFloat(document.getElementById('slider_360_squad').value);
+
+        document.getElementById('val_360_partner').textContent = partnerScore.toFixed(1);
+        document.getElementById('val_360_squad').textContent = squadScore.toFixed(1);
+
+        // Формула: Куратор 45% + Напарник 30% + Отряд 25%
+        baseScore = (curatorBaseScore * 0.45) + (partnerScore * 0.30) + (squadScore * 0.25);
       }
 
       if (document.getElementById('modSolo').checked) baseScore += 0.30;
@@ -1607,6 +1813,7 @@
       const staffId = evalSessionStaffId;
       const role = document.getElementById('evalRoleSelect').value;
       const isStop = document.getElementById('stopFactor').checked;
+      const is360 = document.getElementById('eval360Mode').checked;
 
       if (!campId || !staffId) {
         showToast("Ошибка сессии оценки!", "error");
@@ -1637,35 +1844,49 @@
           disrupt: document.getElementById('penDisrupt').checked
         },
         isStop,
-        is360: document.getElementById('eval360Mode').checked,
+        is360,
+        eval360: is360 ? {
+          curatorScore: parseFloat(document.getElementById('val_360_curator').textContent),
+          partnerScore: parseFloat(document.getElementById('slider_360_partner').value),
+          squadScore: parseFloat(document.getElementById('slider_360_squad').value)
+        } : null,
         timestamp: Date.now()
       };
 
+      // Добавляем сотрудника в состав слёта, если ещё не был там
       const camp = campsList.find(c => c.id === campId);
       const roster = Array.isArray(camp?.roster) ? camp.roster : [];
       if (camp && !roster.includes(staffId)) {
-        const updatedRoster = [...roster, staffId];
-        db.collection('camps').doc(campId).update({ roster: updatedRoster });
+        camp.roster = [...roster, staffId];
+        safeStorageSet('cm_cached_camps', campsList);
+        if (db) db.collection('camps').doc(campId).update({ roster: camp.roster }).catch(e => {});
       }
 
       const existing = evaluationsList.find(ev => ev.campId === campId && ev.staffId === staffId);
-      const targetDocId = evalSessionExistingDocId || (existing ? existing.id : null);
+      const targetDocId = evalSessionExistingDocId || (existing ? existing.id : 'eval_' + Date.now());
 
-      if (targetDocId) {
-        db.collection('evaluations').doc(targetDocId).set(evalData, { merge: true }).then(() => {
-          showToast("Оценка сотрудника успешно обновлена!", "success");
-          closeEvaluationModal();
-        }).catch(err => {
-          showToast("Ошибка обновления: " + err.message, "error");
-        });
+      evalData.id = targetDocId;
+
+      // 1. Мгновенно обновляем локальный стейт и кэш
+      const existingIdx = evaluationsList.findIndex(e => e.id === targetDocId);
+      if (existingIdx !== -1) {
+        evaluationsList[existingIdx] = evalData;
       } else {
-        db.collection('evaluations').add(evalData).then(() => {
-          showToast("Новая оценка успешно сохранена в облаке!", "success");
-          closeEvaluationModal();
-        }).catch(err => {
-          showToast("Ошибка сохранения: " + err.message, "error");
-        });
+        evaluationsList.push(evalData);
       }
+      safeStorageSet('cm_cached_evals', evaluationsList);
+
+      // 2. Синхронизируем с Firestore
+      if (db) {
+        db.collection('evaluations').doc(targetDocId).set(evalData, { merge: true })
+          .then(() => showToast("Оценка сохранена в облаке!", "success"))
+          .catch(err => showToast("Сохранено локально на устройстве", "info"));
+      } else {
+        showToast("Оценка сохранена локально", "success");
+      }
+
+      closeEvaluationModal();
+      updateAllViews();
     }
 
     /* ================= DOSSIER: MEMBER ================= */
@@ -1848,7 +2069,7 @@
       document.getElementById('campDosEvaluatedCount').textContent = `${campEvals.length} из ${roster.length}`;
       document.getElementById('campDosParticipantsBadge').textContent = `${campEvals.length} оценок`;
 
-      // Сортировка участников в досье слёта по K (высшие сверху)
+      // Сортировка участников в досье слёта строго по K
       const sortedRoster = [...roster].sort((aId, bId) => {
         const evA = campEvals.find(e => e.staffId === aId);
         const evB = campEvals.find(e => e.staffId === bId);
@@ -1979,7 +2200,6 @@
       const roster = Array.isArray(camp.roster) ? camp.roster : [];
       document.getElementById('rosterCountBadge').textContent = `${roster.length} человек`;
 
-      // Заполнение выпадающего списка добавления (только те, кто ещё не в составе)
       const select = document.getElementById('rosterAddStaffSelect');
       const available = staffList.filter(s => !roster.includes(s.id));
       if (available.length === 0) {
@@ -1997,7 +2217,7 @@
         return;
       }
 
-      // Сортировка участников внутри слёта
+      // Сортировка участников слёта (по умолчанию: по убыванию K)
       const sortMode = document.getElementById('rosterSortSelect')?.value || 'k_desc';
       const sortedRoster = [...roster].sort((aId, bId) => {
         const staffA = staffList.find(s => s.id === aId);
@@ -2011,7 +2231,6 @@
         const scoreB = evB ? evB.finalScore : -1;
 
         if (sortMode === 'k_desc') {
-          // Сначала оцененные по убыванию K, затем неоцененные по имени
           if (hasScoreA && hasScoreB) return scoreB - scoreA;
           if (hasScoreA) return -1;
           if (hasScoreB) return 1;
@@ -2026,7 +2245,6 @@
           if (hasScoreA && !hasScoreB) return 1;
           return (staffA?.name || '').localeCompare(staffB?.name || '', 'ru');
         } else {
-          // name_asc
           return (staffA?.name || '').localeCompare(staffB?.name || '', 'ru');
         }
       });
@@ -2082,10 +2300,18 @@
 
       const current = Array.isArray(camp.roster) ? camp.roster : [];
       if (!current.includes(staffId)) {
-        const updated = [...current, staffId];
-        db.collection('camps').doc(activeRosterCampId).update({ roster: updated })
-          .then(() => showToast("Сотрудник добавлен в состав слёта", "success"))
-          .catch(err => showToast("Ошибка: " + err.message, "error"));
+        camp.roster = [...current, staffId];
+        safeStorageSet('cm_cached_camps', campsList);
+
+        if (db) {
+          db.collection('camps').doc(activeRosterCampId).update({ roster: camp.roster })
+            .then(() => showToast("Сотрудник добавлен в состав слёта", "success"))
+            .catch(err => showToast("Добавлено локально", "info"));
+        } else {
+          showToast("Сотрудник добавлен в состав слёта", "success");
+        }
+        renderRosterModalContent(activeRosterCampId);
+        updateAllViews();
       }
     }
 
@@ -2100,14 +2326,23 @@
         confirmText: "Исключить",
         onConfirm: () => {
           const current = Array.isArray(camp.roster) ? camp.roster : [];
-          const updated = current.filter(id => id !== staffId);
-          db.collection('camps').doc(campId).update({ roster: updated }).then(() => {
-            const evalsToDelete = evaluationsList.filter(e => e.campId === campId && e.staffId === staffId);
-            evalsToDelete.forEach(ev => {
-              db.collection('evaluations').doc(ev.id).delete();
+          camp.roster = current.filter(id => id !== staffId);
+          safeStorageSet('cm_cached_camps', campsList);
+
+          // Удаляем оценки
+          evaluationsList = evaluationsList.filter(e => !(e.campId === campId && e.staffId === staffId));
+          safeStorageSet('cm_cached_evals', evaluationsList);
+
+          if (db) {
+            db.collection('camps').doc(campId).update({ roster: camp.roster }).catch(e => {});
+            evaluationsList.filter(e => e.campId === campId && e.staffId === staffId).forEach(ev => {
+              db.collection('evaluations').doc(ev.id).delete().catch(e => {});
             });
-            showToast("Сотрудник исключён из слёта, оценка аннулирована", "info");
-          }).catch(err => showToast("Ошибка: " + err.message, "error"));
+          }
+
+          showToast("Сотрудник исключён из слёта, оценка аннулирована", "info");
+          renderRosterModalContent(campId);
+          updateAllViews();
         }
       });
     }
@@ -2157,17 +2392,26 @@
       };
 
       if (editId) {
-        db.collection('staff').doc(editId).update(data).then(() => {
-          showToast("Данные сотрудника обновлены", "success");
-          closeStaffModal();
-        }).catch(err => showToast("Ошибка: " + err.message, "error"));
+        data.id = editId;
+        const idx = staffList.findIndex(s => s.id === editId);
+        if (idx !== -1) staffList[idx] = { ...staffList[idx], ...data };
+        safeStorageSet('cm_cached_staff', staffList);
+
+        if (db) db.collection('staff').doc(editId).update(data).catch(e => {});
+        showToast("Данные сотрудника обновлены", "success");
+        closeStaffModal();
       } else {
+        const newId = 'staff_' + Date.now();
+        data.id = newId;
         data.createdAt = Date.now();
-        db.collection('staff').add(data).then(() => {
-          showToast("Новый сотрудник добавлен в базу", "success");
-          closeStaffModal();
-        }).catch(err => showToast("Ошибка: " + err.message, "error"));
+        staffList.push(data);
+        safeStorageSet('cm_cached_staff', staffList);
+
+        if (db) db.collection('staff').doc(newId).set(data).catch(e => {});
+        showToast("Новый сотрудник добавлен в базу", "success");
+        closeStaffModal();
       }
+      updateAllViews();
     }
 
     function deleteStaff(staffId) {
@@ -2179,19 +2423,26 @@
         message: `Вы действительно хотите удалить "${member.name}"? Все его оценки со слётов также будут стёрты.`,
         confirmText: "Да, удалить",
         onConfirm: () => {
-          db.collection('staff').doc(staffId).delete().then(() => {
-            evaluationsList.filter(e => e.staffId === staffId).forEach(ev => {
-              db.collection('evaluations').doc(ev.id).delete();
-            });
-            campsList.forEach(camp => {
-              const current = Array.isArray(camp.roster) ? camp.roster : [];
-              if (current.includes(staffId)) {
-                const updated = current.filter(id => id !== staffId);
-                db.collection('camps').doc(camp.id).update({ roster: updated });
-              }
-            });
-            showToast("Сотрудник удалён из базы", "info");
-          }).catch(err => showToast("Ошибка удаления: " + err.message, "error"));
+          staffList = staffList.filter(s => s.id !== staffId);
+          safeStorageSet('cm_cached_staff', staffList);
+
+          evaluationsList = evaluationsList.filter(e => e.staffId !== staffId);
+          safeStorageSet('cm_cached_evals', evaluationsList);
+
+          campsList.forEach(camp => {
+            const current = Array.isArray(camp.roster) ? camp.roster : [];
+            if (current.includes(staffId)) {
+              camp.roster = current.filter(id => id !== staffId);
+            }
+          });
+          safeStorageSet('cm_cached_camps', campsList);
+
+          if (db) {
+            db.collection('staff').doc(staffId).delete().catch(e => {});
+          }
+
+          showToast("Сотрудник удалён из базы", "info");
+          updateAllViews();
         }
       });
     }
@@ -2254,18 +2505,27 @@
       };
 
       if (editId) {
-        db.collection('camps').doc(editId).update(data).then(() => {
-          showToast("Слёт успешно обновлён", "success");
-          closeCampModal();
-        }).catch(err => showToast("Ошибка: " + err.message, "error"));
+        data.id = editId;
+        const idx = campsList.findIndex(c => c.id === editId);
+        if (idx !== -1) campsList[idx] = { ...campsList[idx], ...data };
+        safeStorageSet('cm_cached_camps', campsList);
+
+        if (db) db.collection('camps').doc(editId).update(data).catch(e => {});
+        showToast("Слёт успешно обновлён", "success");
+        closeCampModal();
       } else {
+        const newId = 'camp_' + Date.now();
+        data.id = newId;
         data.roster = [];
         data.createdAt = Date.now();
-        db.collection('camps').add(data).then(() => {
-          showToast("Новый слёт создан", "success");
-          closeCampModal();
-        }).catch(err => showToast("Ошибка: " + err.message, "error"));
+        campsList.push(data);
+        safeStorageSet('cm_cached_camps', campsList);
+
+        if (db) db.collection('camps').doc(newId).set(data).catch(e => {});
+        showToast("Новый слёт создан", "success");
+        closeCampModal();
       }
+      updateAllViews();
     }
 
     function deleteCamp(campId) {
@@ -2277,12 +2537,18 @@
         message: `Удалить слёт "${camp.name}"? Все выставленные на нём оценки будут аннулированы.`,
         confirmText: "Да, удалить",
         onConfirm: () => {
-          db.collection('camps').doc(campId).delete().then(() => {
-            evaluationsList.filter(e => e.campId === campId).forEach(ev => {
-              db.collection('evaluations').doc(ev.id).delete();
-            });
-            showToast("Слёт удалён", "info");
-          }).catch(err => showToast("Ошибка удаления: " + err.message, "error"));
+          campsList = campsList.filter(c => c.id !== campId);
+          safeStorageSet('cm_cached_camps', campsList);
+
+          evaluationsList = evaluationsList.filter(e => e.campId !== campId);
+          safeStorageSet('cm_cached_evals', evaluationsList);
+
+          if (db) {
+            db.collection('camps').doc(campId).delete().catch(e => {});
+          }
+
+          showToast("Слёт удалён", "info");
+          updateAllViews();
         }
       });
     }
@@ -2326,6 +2592,10 @@
           "Даты слёта": formatCampDateRange(camp),
           "Роль на смене": ROLE_WEIGHTS[e.role]?.label || e.role,
           "Оценка за слёт (K)": Number(e.finalScore) || 0,
+          "Режим 360°": e.is360 ? "Да" : "Нет",
+          "Куратор (360)": e.eval360?.curatorScore ?? "",
+          "Напарник (360)": e.eval360?.partnerScore ?? "",
+          "Отряд (360)": e.eval360?.squadScore ?? "",
           "D (Дисциплина)": e.vectors?.D !== undefined ? Number(e.vectors.D) : "",
           "A (Аудитория)": e.vectors?.A !== undefined ? Number(e.vectors.A) : "",
           "S (Безопасность)": e.vectors?.S !== undefined ? Number(e.vectors.S) : "",
