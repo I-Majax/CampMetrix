@@ -201,7 +201,6 @@
           </button>
         </div>
 
-        <!-- Camps List Container (Clean responsive grid for mobile and desktop) -->
         <div id="campsList" class="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4"></div>
         
         <div id="emptyCampsNotice" class="hidden p-8 text-center text-slate-400 text-sm bg-slate-900/40 rounded-xl border border-slate-800 space-y-3">
@@ -256,7 +255,6 @@
   <!-- MODAL: STEP 2 OF EVALUATION -->
   <div id="evalModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 hidden">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-3xl w-full flex flex-col max-h-[94vh] shadow-2xl overflow-hidden">
-      <!-- Fixed Sticky Header -->
       <div class="flex justify-between items-center px-4 sm:px-6 py-3 border-b border-slate-700 bg-slate-800 flex-shrink-0 z-10">
         <div class="flex items-center gap-2">
           <button onclick="backToStep1Selection()" class="p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white transition" title="Вернуться к выбору слёта">
@@ -277,7 +275,6 @@
         </div>
       </div>
 
-      <!-- Scrollable Form Body -->
       <div class="overflow-y-auto touch-scroll p-4 sm:p-6 space-y-4 sm:space-y-5 flex-1">
         <form id="evalWizardForm" onsubmit="saveEvaluation(event)" class="space-y-4 sm:space-y-5">
           
@@ -574,7 +571,7 @@
     </div>
   </div>
 
-  <!-- MODAL: CAMP ROSTER -->
+  <!-- MODAL: CAMP ROSTER (С СОРТИРОВКОЙ ПО K) -->
   <div id="rosterModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 hidden">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-2xl w-full flex flex-col max-h-[92vh] shadow-2xl overflow-hidden">
       <div class="flex justify-between items-center px-4 sm:px-6 py-3.5 border-b border-slate-700 bg-slate-800 flex-shrink-0 z-10">
@@ -601,10 +598,24 @@
         </div>
 
         <div class="space-y-2">
-          <div class="flex justify-between items-center text-xs font-bold text-slate-400 uppercase tracking-wider">
-            <span>Люди в составе этого слёта</span>
-            <span id="rosterCountBadge" class="text-indigo-400">0 человек</span>
+          <div class="flex flex-wrap items-center justify-between gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider pb-1">
+            <div class="flex items-center gap-2">
+              <span>Люди в составе</span>
+              <span id="rosterCountBadge" class="text-indigo-400 font-semibold lowercase">0 человек</span>
+            </div>
+            
+            <!-- Внутренняя сортировка состава слёта по K -->
+            <div class="flex items-center gap-1.5">
+              <span class="text-[11px] font-normal normal-case text-slate-400">Сортировка:</span>
+              <select id="rosterSortSelect" onchange="renderRosterModalContent(activeRosterCampId)" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-[11px] text-slate-200 focus:outline-none focus:border-indigo-500 font-medium">
+                <option value="k_desc">По рейтингу K (высшие)</option>
+                <option value="k_asc">По рейтингу K (низшие)</option>
+                <option value="name_asc">По алфавиту (А → Я)</option>
+                <option value="pending_first">Сначала неоцененные</option>
+              </select>
+            </div>
           </div>
+
           <div id="rosterStaffList" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
         </div>
       </div>
@@ -667,7 +678,7 @@
     </div>
   </div>
 
-  <!-- MODAL: ADD / EDIT CAMP (СТРОГОЕ ДАТИРОВАНИЕ ЧЕРЕЗ TYPE="DATE") -->
+  <!-- MODAL: ADD / EDIT CAMP (СТРОГИЕ ДАТЫ) -->
   <div id="campModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 hidden">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-xl">
       <div class="flex justify-between items-center border-b border-slate-700 pb-3">
@@ -685,7 +696,6 @@
           <input type="text" id="campLocationInput" placeholder="ДОЛ «Лесной»" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500">
         </div>
         
-        <!-- Даты проведения: сохраняются как календарные даты -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-medium text-slate-300 mb-1">Дата начала *</label>
@@ -950,7 +960,6 @@
         activeBtn.classList.remove('text-slate-400');
       }
 
-      // Всегда явно обновляем содержимое открытой вкладки
       if (tabId === 'camps') {
         renderCampsList();
       } else if (tabId === 'registry') {
@@ -993,7 +1002,6 @@
         const s = new Date(camp.startDate);
         if (!isNaN(s.getTime())) return `с ${s.toLocaleDateString('ru-RU')}`;
       }
-      // Обратная совместимость, если в базе ещё остался строковый формат
       return camp.dates || 'Даты не указаны';
     }
 
@@ -1046,7 +1054,6 @@
         };
       }
 
-      // ХРОНОЛОГИЧЕСКАЯ СОРТИРОВКА: по дате начала слёта (startDate), либо по timestamp
       evals.sort((a, b) => {
         const campA = campsList.find(c => c.id === a.campId);
         const campB = campsList.find(c => c.id === b.campId);
@@ -1107,7 +1114,6 @@
         overallK = totalW > 0 ? parseFloat((weightedSum / totalW).toFixed(2)) : 0;
       }
 
-      // ТРЕНД: точное сравнение последнего слёта с предпоследним
       let trend = '—';
       if (evals.length >= 2) {
         const latestScore = evals[evals.length - 1].finalScore;
@@ -1340,93 +1346,6 @@
         `;
         container.appendChild(card);
       });
-    }
-
-    /* ================= CAMPS LIST & METRICS (MOBILE OPTIMIZED) ================= */
-    function renderCampsList() {
-      const container = document.getElementById('campsList');
-      const emptyNotice = document.getElementById('emptyCampsNotice');
-      if (!container) return;
-
-      container.innerHTML = '';
-
-      if (campsList.length === 0) {
-        if (emptyNotice) emptyNotice.classList.remove('hidden');
-        container.classList.add('hidden');
-        return;
-      }
-      
-      if (emptyNotice) emptyNotice.classList.add('hidden');
-      container.classList.remove('hidden');
-
-      // Сортировка слётов по дате начала (свежие сверху)
-      const sortedCamps = [...campsList].sort((a, b) => {
-        const timeA = a.startDate ? new Date(a.startDate).getTime() : (a.createdAt || 0);
-        const timeB = b.startDate ? new Date(b.startDate).getTime() : (b.createdAt || 0);
-        return timeB - timeA;
-      });
-
-      sortedCamps.forEach(c => {
-        const rosterCount = (Array.isArray(c.roster) ? c.roster : []).length;
-        const campEvals = getCampEvaluations(c.id);
-        const evalsCount = campEvals.length;
-        
-        let avgScore = '—';
-        if (campEvals.length > 0) {
-          const sum = campEvals.reduce((acc, curr) => acc + curr.finalScore, 0);
-          avgScore = (sum / campEvals.length).toFixed(2);
-        }
-
-        const dateRangeStr = formatCampDateRange(c);
-
-        const card = document.createElement('div');
-        card.className = 'bg-slate-800/80 border border-slate-700/60 p-3.5 sm:p-4 rounded-xl flex flex-col justify-between gap-3 shadow-sm hover:border-slate-600 transition';
-        card.innerHTML = `
-          <div>
-            <div class="flex items-start justify-between gap-2">
-              <div class="font-bold text-white text-sm sm:text-base leading-tight">${c.name || 'Слёт без названия'}</div>
-              <div class="flex items-center gap-1 flex-shrink-0">
-                <button onclick="openCampModal('${c.id}')" class="p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition" title="Редактировать слёт">
-                  <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                </button>
-                <button onclick="deleteCamp('${c.id}')" class="p-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900 text-rose-400 border border-rose-800/40 transition" title="Удалить слёт">
-                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                </button>
-              </div>
-            </div>
-            
-            <div class="text-[11px] text-slate-400 mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
-              <span class="flex items-center gap-1">📍 ${c.location || 'Локация не указана'}</span>
-              <span class="flex items-center gap-1 text-indigo-300">📅 ${dateRangeStr}</span>
-            </div>
-
-            <div class="flex flex-wrap items-center justify-between gap-2 mt-3 pt-2.5 border-t border-slate-700/60 text-xs">
-              <div class="flex items-center gap-3">
-                <span class="text-indigo-400 font-semibold flex items-center gap-1">
-                  <i data-lucide="users" class="w-3.5 h-3.5"></i> Состав: ${rosterCount}
-                </span>
-                <span class="text-emerald-400 font-semibold flex items-center gap-1">
-                  <i data-lucide="award" class="w-3.5 h-3.5"></i> Оценено: ${evalsCount}
-                </span>
-              </div>
-              <span class="text-amber-300 font-bold ml-auto">
-                Средний K: ${avgScore}
-              </span>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-2 pt-1">
-            <button onclick="openRosterModal('${c.id}')" class="py-2 px-2 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 border border-indigo-500/30">
-              <i data-lucide="users" class="w-3.5 h-3.5"></i> Состав (${rosterCount})
-            </button>
-            <button onclick="viewCampDossier('${c.id}')" class="py-2 px-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5">
-              <i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i> Досье слёта
-            </button>
-          </div>
-        `;
-        container.appendChild(card);
-      });
-      lucide.createIcons();
     }
 
     /* ================= 2-STEP EVALUATION WORKFLOW ================= */
@@ -1826,6 +1745,10 @@
     }
 
     function closeDossierModal() {
+      if (radarChartInstance) {
+        radarChartInstance.destroy();
+        radarChartInstance = null;
+      }
       document.getElementById('dossierModal').classList.add('hidden');
     }
 
@@ -1844,7 +1767,9 @@
     }
 
     function renderRadar(v) {
-      const ctx = document.getElementById('radarChart').getContext('2d');
+      const canvas = document.getElementById('radarChart');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
       if (radarChartInstance) radarChartInstance.destroy();
 
       radarChartInstance = new Chart(ctx, {
@@ -1923,12 +1848,21 @@
       document.getElementById('campDosEvaluatedCount').textContent = `${campEvals.length} из ${roster.length}`;
       document.getElementById('campDosParticipantsBadge').textContent = `${campEvals.length} оценок`;
 
+      // Сортировка участников в досье слёта по K (высшие сверху)
+      const sortedRoster = [...roster].sort((aId, bId) => {
+        const evA = campEvals.find(e => e.staffId === aId);
+        const evB = campEvals.find(e => e.staffId === bId);
+        const scoreA = evA ? evA.finalScore : -1;
+        const scoreB = evB ? evB.finalScore : -1;
+        return scoreB - scoreA;
+      });
+
       const listDiv = document.getElementById('campDosParticipantsList');
       listDiv.innerHTML = '';
       if (roster.length === 0) {
         listDiv.innerHTML = '<div class="text-xs text-slate-500 p-3 bg-slate-900/40 rounded-xl">В состав слёта ещё никто не включён.</div>';
       } else {
-        roster.forEach(staffId => {
+        sortedRoster.forEach(staffId => {
           const staff = staffList.find(s => s.id === staffId);
           if (!staff) return;
           const ev = campEvals.find(e => e.staffId === staffId);
@@ -1971,11 +1905,17 @@
     }
 
     function closeCampDossierModal() {
+      if (campRadarChartInstance) {
+        campRadarChartInstance.destroy();
+        campRadarChartInstance = null;
+      }
       document.getElementById('campDossierModal').classList.add('hidden');
     }
 
     function renderCampRadar(v) {
-      const ctx = document.getElementById('campRadarChart').getContext('2d');
+      const canvas = document.getElementById('campRadarChart');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
       if (campRadarChartInstance) campRadarChartInstance.destroy();
 
       campRadarChartInstance = new Chart(ctx, {
@@ -2016,7 +1956,7 @@
       });
     }
 
-    /* ================= ROSTER MANAGEMENT ================= */
+    /* ================= ROSTER MANAGEMENT (С СОРТИРОВКОЙ ПО K) ================= */
     function openRosterModal(campId) {
       activeRosterCampId = campId;
       renderRosterModalContent(campId);
@@ -2039,6 +1979,7 @@
       const roster = Array.isArray(camp.roster) ? camp.roster : [];
       document.getElementById('rosterCountBadge').textContent = `${roster.length} человек`;
 
+      // Заполнение выпадающего списка добавления (только те, кто ещё не в составе)
       const select = document.getElementById('rosterAddStaffSelect');
       const available = staffList.filter(s => !roster.includes(s.id));
       if (available.length === 0) {
@@ -2056,7 +1997,41 @@
         return;
       }
 
-      roster.forEach(staffId => {
+      // Сортировка участников внутри слёта
+      const sortMode = document.getElementById('rosterSortSelect')?.value || 'k_desc';
+      const sortedRoster = [...roster].sort((aId, bId) => {
+        const staffA = staffList.find(s => s.id === aId);
+        const staffB = staffList.find(s => s.id === bId);
+        const evA = evaluationsList.find(e => e.campId === campId && e.staffId === aId);
+        const evB = evaluationsList.find(e => e.campId === campId && e.staffId === bId);
+        
+        const hasScoreA = evA !== undefined;
+        const hasScoreB = evB !== undefined;
+        const scoreA = evA ? evA.finalScore : -1;
+        const scoreB = evB ? evB.finalScore : -1;
+
+        if (sortMode === 'k_desc') {
+          // Сначала оцененные по убыванию K, затем неоцененные по имени
+          if (hasScoreA && hasScoreB) return scoreB - scoreA;
+          if (hasScoreA) return -1;
+          if (hasScoreB) return 1;
+          return (staffA?.name || '').localeCompare(staffB?.name || '', 'ru');
+        } else if (sortMode === 'k_asc') {
+          if (hasScoreA && hasScoreB) return scoreA - scoreB;
+          if (hasScoreA) return -1;
+          if (hasScoreB) return 1;
+          return (staffA?.name || '').localeCompare(staffB?.name || '', 'ru');
+        } else if (sortMode === 'pending_first') {
+          if (!hasScoreA && hasScoreB) return -1;
+          if (hasScoreA && !hasScoreB) return 1;
+          return (staffA?.name || '').localeCompare(staffB?.name || '', 'ru');
+        } else {
+          // name_asc
+          return (staffA?.name || '').localeCompare(staffB?.name || '', 'ru');
+        }
+      });
+
+      sortedRoster.forEach(staffId => {
         const staff = staffList.find(s => s.id === staffId);
         if (!staff) return;
 
@@ -2243,7 +2218,6 @@
         document.getElementById('campNameInput').value = '';
         document.getElementById('campLocationInput').value = '';
         
-        // По умолчанию ставим сегодняшнюю дату
         const todayStr = new Date().toISOString().slice(0, 10);
         document.getElementById('campStartDateInput').value = todayStr;
         document.getElementById('campEndDateInput').value = todayStr;
@@ -2330,11 +2304,11 @@
           "Позывной": s.nickname || "",
           "Специализация": ROLE_WEIGHTS[s.primaryRole]?.label || s.primaryRole,
           "Контакты": s.contact || "",
-          "Слётов пройдено": m.count,
-          "Педагогический K": m.pedK !== null ? m.pedK : "",
-          "Организаторский K": m.orgK !== null ? m.orgK : "",
-          "Технический K": m.techK !== null ? m.techK : "",
-          "Итоговый K-индекс": m.isStopListed ? 0 : m.overallK,
+          "Слётов пройдено": Number(m.count) || 0,
+          "Педагогический K": m.pedK !== null ? Number(m.pedK) : "",
+          "Организаторский K": m.orgK !== null ? Number(m.orgK) : "",
+          "Технический K": m.techK !== null ? Number(m.techK) : "",
+          "Итоговый K-индекс": m.isStopListed ? 0 : Number(m.overallK) || 0,
           "Тренд": m.trend,
           "Статус в лагере": badge.label
         };
@@ -2346,18 +2320,18 @@
         const staff = staffList.find(s => s.id === e.staffId);
         const camp = campsList.find(c => c.id === e.campId);
         return {
-          "Сотрудник": staff ? staff.name : e.staffId,
+          "Сотрудник": staff ? (staff.name || "Без имени") : e.staffId,
           "Слёт / Смена": camp ? camp.name : e.campId,
           "Локация": camp ? (camp.location || "") : "",
           "Даты слёта": formatCampDateRange(camp),
           "Роль на смене": ROLE_WEIGHTS[e.role]?.label || e.role,
-          "Оценка за слёт (K)": e.finalScore,
-          "D (Дисциплина)": e.vectors?.D || "",
-          "A (Аудитория)": e.vectors?.A || "",
-          "S (Безопасность)": e.vectors?.S || "",
-          "T (Командность)": e.vectors?.T || "",
-          "F (Стресс)": e.vectors?.F || "",
-          "L (Обучаемость)": e.vectors?.L || "",
+          "Оценка за слёт (K)": Number(e.finalScore) || 0,
+          "D (Дисциплина)": e.vectors?.D !== undefined ? Number(e.vectors.D) : "",
+          "A (Аудитория)": e.vectors?.A !== undefined ? Number(e.vectors.A) : "",
+          "S (Безопасность)": e.vectors?.S !== undefined ? Number(e.vectors.S) : "",
+          "T (Командность)": e.vectors?.T !== undefined ? Number(e.vectors.T) : "",
+          "F (Стресс)": e.vectors?.F !== undefined ? Number(e.vectors.F) : "",
+          "L (Обучаемость)": e.vectors?.L !== undefined ? Number(e.vectors.L) : "",
           "Дата фиксации": e.timestamp ? new Date(e.timestamp).toLocaleDateString('ru-RU') : ""
         };
       });
@@ -2367,15 +2341,15 @@
       const campRows = campsList.map(c => {
         const rosterCount = (Array.isArray(c.roster) ? c.roster : []).length;
         const campEvals = getCampEvaluations(c.id);
-        const avg = campEvals.length > 0 ? (campEvals.reduce((a, b) => a + b.finalScore, 0) / campEvals.length).toFixed(2) : "—";
+        const avg = campEvals.length > 0 ? Number((campEvals.reduce((a, b) => a + b.finalScore, 0) / campEvals.length).toFixed(2)) : "";
         return {
-          "Название слёта": c.name,
+          "Название слёта": c.name || "Без названия",
           "Локация / База": c.location || "",
           "Даты проведения": formatCampDateRange(c),
           "Дата начала": c.startDate || "",
           "Дата окончания": c.endDate || "",
-          "Человек в составе": rosterCount,
-          "Оценено сотрудников": campEvals.length,
+          "Человек в составе": Number(rosterCount) || 0,
+          "Оценено сотрудников": Number(campEvals.length) || 0,
           "Средний K команды": avg
         };
       });
