@@ -15,7 +15,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
   <style>
-    /* Адаптация под iframe Google Sites */
     html, body {
       min-height: 100%;
       height: auto;
@@ -28,7 +27,6 @@
       body { background: white !important; color: black !important; font-size: 11pt; }
     }
     .print-only { display: none; }
-    /* Стилизация скроллбаров внутри фрейма */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #1e293b; }
     ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
@@ -36,11 +34,6 @@
   </style>
 </head>
 <body class="text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
-
-  <!-- Предупреждение, если ключи Firebase ещё не вставлены -->
-  <div id="setupBanner" class="hidden bg-amber-500/20 border-b border-amber-500/40 px-4 py-2 text-xs text-amber-200 text-center font-medium no-print">
-    ⚠️ База данных работает в демо-режиме. Вставьте ваши ключи Firebase в код страницы, чтобы включить общую синхронизацию между устройствами.
-  </div>
 
   <!-- Header -->
   <header class="bg-slate-800/90 backdrop-blur border-b border-slate-700/80 sticky top-0 z-30 px-4 py-3">
@@ -52,9 +45,9 @@
         <div>
           <h1 class="text-base sm:text-lg font-bold tracking-tight text-white flex items-center gap-2">
             CampMetrix 360°
-            <span class="text-[11px] font-normal px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Cloud Multi-Camp</span>
+            <span class="text-[11px] font-normal px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Cloud Firebase</span>
           </h1>
-          <p class="text-xs text-slate-400">Кадровый реестр и мультиролевая оценка полезности персонала</p>
+          <p class="text-xs text-slate-400">Кадровый реестр и мультиролевая оценка полезности персонала слётов</p>
         </div>
       </div>
 
@@ -86,7 +79,6 @@
 
     <!-- TAB 1: REGISTRY -->
     <section id="tab-registry" class="space-y-6">
-      <!-- Summary Metrics Cards -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 shadow-sm">
           <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Всего в базе</div>
@@ -110,7 +102,6 @@
         </div>
       </div>
 
-      <!-- Filters & Actions -->
       <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-3 sm:p-4 flex flex-wrap gap-3 items-center justify-between shadow-sm">
         <div class="flex flex-wrap items-center gap-3 flex-1 min-w-[260px]">
           <div class="relative flex-1 min-w-[200px] max-w-md">
@@ -134,7 +125,6 @@
         </div>
       </div>
 
-      <!-- Staff Registry Table -->
       <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl overflow-hidden shadow-sm">
         <div class="overflow-x-auto">
           <table class="w-full text-left text-sm whitespace-nowrap">
@@ -150,9 +140,7 @@
                 <th class="py-3 px-4 text-right">Действия</th>
               </tr>
             </thead>
-            <tbody id="staffTableBody" class="divide-y divide-slate-700/40">
-              <!-- Dynamically populated -->
-            </tbody>
+            <tbody id="staffTableBody" class="divide-y divide-slate-700/40"></tbody>
           </table>
         </div>
         <div id="emptyStaffNotice" class="hidden p-8 text-center text-slate-400 text-sm">
@@ -161,7 +149,7 @@
       </div>
     </section>
 
-    <!-- TAB 2: 360° EVALUATION WIZARD -->
+    <!-- TAB 2: EVALUATION WIZARD -->
     <section id="tab-evaluation" class="hidden space-y-6">
       <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 sm:p-6 max-w-4xl mx-auto space-y-6 shadow-sm">
         <div class="border-b border-slate-700 pb-4">
@@ -169,22 +157,18 @@
             <i data-lucide="award" class="text-indigo-400 w-6 h-6"></i>
             Оценка сотрудника за слёт
           </h2>
-          <p class="text-xs sm:text-sm text-slate-400 mt-1">Оценка фиксируется за конкретный слёт и автоматически пересчитывает общий K-индекс сотрудника в реальном времени.</p>
+          <p class="text-xs sm:text-sm text-slate-400 mt-1">Оценка фиксируется за конкретный слёт и сохраняется прямо в облачную базу Firestore.</p>
         </div>
 
         <form id="evalForm" onsubmit="saveEvaluation(event)" class="space-y-6">
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label class="block text-xs font-medium text-slate-300 mb-1">Слёт / Смена *</label>
-              <select id="evalCampSelect" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:outline-none focus:border-indigo-500">
-                <!-- Dynamically populated -->
-              </select>
+              <select id="evalCampSelect" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"></select>
             </div>
             <div>
               <label class="block text-xs font-medium text-slate-300 mb-1">Сотрудник *</label>
-              <select id="evalStaffSelect" required onchange="calculateWizardScore()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:outline-none focus:border-indigo-500">
-                <!-- Dynamically populated -->
-              </select>
+              <select id="evalStaffSelect" required onchange="calculateWizardScore()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"></select>
             </div>
             <div>
               <label class="block text-xs font-medium text-slate-300 mb-1">Роль на слёте *</label>
@@ -203,13 +187,12 @@
             </div>
           </div>
 
-          <!-- Mode 360 toggle -->
           <div class="flex items-center justify-between p-3.5 rounded-xl bg-indigo-950/40 border border-indigo-500/30">
             <div class="flex items-center gap-3">
               <i data-lucide="layers" class="text-indigo-400 w-5 h-5"></i>
               <div>
                 <div class="text-sm font-bold text-white">Режим 360° (Куратор 45% + Напарник 30% + Дети 25%)</div>
-                <div class="text-xs text-slate-400">Взвешенная оценка трёх сторон для исключения предвзятости</div>
+                <div class="text-xs text-slate-400">Взвешивание оценок трех сторон для объективности</div>
               </div>
             </div>
             <label class="relative inline-flex items-center cursor-pointer">
@@ -218,7 +201,6 @@
             </label>
           </div>
 
-          <!-- 6 Competency Vector Sliders -->
           <div class="space-y-4 bg-slate-900/60 p-4 rounded-xl border border-slate-700/60">
             <div class="flex justify-between items-center border-b border-slate-700/60 pb-2">
               <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Векторы компетенций (от 1.0 до 5.0)</h3>
@@ -226,25 +208,22 @@
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-              <!-- D -->
               <div class="space-y-1">
                 <div class="flex justify-between text-xs">
                   <span class="text-slate-300 font-medium">1. Дисциплина и регламент (D)</span>
                   <span id="val_D" class="font-bold text-indigo-400 text-sm">4.5</span>
                 </div>
                 <input type="range" id="slider_D" min="1" max="5" step="0.1" value="4.5" oninput="calculateWizardScore()" class="w-full accent-indigo-500 cursor-pointer">
-                <div class="text-[11px] text-slate-500">Тайминг слёта, планёрки, отбой, сохранность имущества базы</div>
+                <div class="text-[11px] text-slate-500">Тайминг слёта, планёрки, отбой, инвентарь</div>
               </div>
-              <!-- A -->
               <div class="space-y-1">
                 <div class="flex justify-between text-xs">
-                  <span class="text-slate-300 font-medium">2. Работа с аудиторией (A)</span>
+                  <span class="text-slate-300 font-medium">2. Работа с коллективом (A)</span>
                   <span id="val_A" class="font-bold text-indigo-400 text-sm">4.5</span>
                 </div>
                 <input type="range" id="slider_A" min="1" max="5" step="0.1" value="4.5" oninput="calculateWizardScore()" class="w-full accent-indigo-500 cursor-pointer">
-                <div class="text-[11px] text-slate-500">Включение тихих ребят, динамика группы, микроклимат без травли</div>
+                <div class="text-[11px] text-slate-500">Включение тихих ребят, динамика группы, климат без буллинга</div>
               </div>
-              <!-- S -->
               <div class="space-y-1">
                 <div class="flex justify-between text-xs">
                   <span class="text-slate-300 font-medium">3. Безопасность и ТБ (S)</span>
@@ -253,7 +232,6 @@
                 <input type="range" id="slider_S" min="1" max="5" step="0.1" value="4.8" oninput="calculateWizardScore()" class="w-full accent-indigo-500 cursor-pointer">
                 <div class="text-[11px] text-slate-500">Питьевой режим, головные уборы, медпункт, контроль рисков</div>
               </div>
-              <!-- T -->
               <div class="space-y-1">
                 <div class="flex justify-between text-xs">
                   <span class="text-slate-300 font-medium">4. Командность и партнерство (T)</span>
@@ -262,28 +240,25 @@
                 <input type="range" id="slider_T" min="1" max="5" step="0.1" value="4.2" oninput="calculateWizardScore()" class="w-full accent-indigo-500 cursor-pointer">
                 <div class="text-[11px] text-slate-500">Подстраховка напарника, помощь штабу, здоровая атмосфера</div>
               </div>
-              <!-- F -->
               <div class="space-y-1">
                 <div class="flex justify-between text-xs">
                   <span class="text-slate-300 font-medium">5. Стрессоустойчивость и форс-мажор (F)</span>
                   <span id="val_F" class="font-bold text-indigo-400 text-sm">4.0</span>
                 </div>
                 <input type="range" id="slider_F" min="1" max="5" step="0.1" value="4.0" oninput="calculateWizardScore()" class="w-full accent-indigo-500 cursor-pointer">
-                <div class="text-[11px] text-slate-500">Реакция на ливень, сдвиг программы, хладнокровие при ЧП</div>
+                <div class="text-[11px] text-slate-500">Реакция на непогоду, сдвиг программы, хладнокровие</div>
               </div>
-              <!-- L -->
               <div class="space-y-1">
                 <div class="flex justify-between text-xs">
                   <span class="text-slate-300 font-medium">6. Обучаемость и дебрифинг (L)</span>
                   <span id="val_L" class="font-bold text-indigo-400 text-sm">4.5</span>
                 </div>
                 <input type="range" id="slider_L" min="1" max="5" step="0.1" value="4.5" oninput="calculateWizardScore()" class="w-full accent-indigo-500 cursor-pointer">
-                <div class="text-[11px] text-slate-500">Реакция на замечания куратора, не повторяет ошибок вчерашнего дня</div>
+                <div class="text-[11px] text-slate-500">Принятие критики куратора, скорость исправления ошибок</div>
               </div>
             </div>
           </div>
 
-          <!-- Modifiers and Penalties -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="p-3.5 rounded-xl bg-slate-900/60 border border-slate-700/60 space-y-2">
               <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider">Бонусы за условия смены</span>
@@ -318,7 +293,6 @@
             </div>
           </div>
 
-          <!-- Wizard Result Card -->
           <div class="p-4 rounded-xl bg-gradient-to-r from-slate-900 to-indigo-950 border border-indigo-800/40 flex flex-wrap items-center justify-between gap-4">
             <div>
               <div class="text-xs text-slate-400 uppercase font-medium">Расчётный коэффициент за слёт:</div>
@@ -328,14 +302,14 @@
               </div>
             </div>
             <button type="submit" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold shadow-lg shadow-emerald-950/40 transition flex items-center gap-2">
-              <i data-lucide="check-circle" class="w-5 h-5"></i> Зафиксировать в реестре
+              <i data-lucide="check-circle" class="w-5 h-5"></i> Сохранить в облако
             </button>
           </div>
         </form>
       </div>
     </section>
 
-    <!-- TAB 3: CAMPS & SHIFTS -->
+    <!-- TAB 3: CAMPS -->
     <section id="tab-camps" class="hidden space-y-6">
       <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 sm:p-6 max-w-4xl mx-auto space-y-6 shadow-sm">
         <div class="flex items-center justify-between border-b border-slate-700 pb-4">
@@ -343,16 +317,13 @@
             <h2 class="text-xl font-bold text-white flex items-center gap-2">
               <i data-lucide="tent" class="text-indigo-400 w-6 h-6"></i> Слёты и выездные смены
             </h2>
-            <p class="text-xs sm:text-sm text-slate-400 mt-1">Добавляйте проекты для накопления раздельной статистики.</p>
+            <p class="text-xs sm:text-sm text-slate-400 mt-1">Добавляйте проекты для раздельного учёта оценок команды.</p>
           </div>
           <button onclick="openCampModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-semibold transition flex items-center gap-2 shadow-sm">
             <i data-lucide="plus" class="w-4 h-4"></i> Создать слёт
           </button>
         </div>
-
-        <div id="campsList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- Camps dynamically rendered -->
-        </div>
+        <div id="campsList" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
       </div>
     </section>
 
@@ -424,7 +395,7 @@
     </div>
   </div>
 
-  <!-- MODAL: DOSSIER & RADAR CHART -->
+  <!-- MODAL: DOSSIER & RADAR -->
   <div id="dossierModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 hidden overflow-y-auto">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-3xl w-full p-5 sm:p-6 space-y-5 my-6 shadow-2xl">
       <div class="flex justify-between items-center border-b border-slate-700 pb-3">
@@ -440,7 +411,6 @@
         </div>
       </div>
 
-      <!-- K-Indices Badges -->
       <div class="grid grid-cols-3 gap-3">
         <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700 text-center">
           <div class="text-[10px] text-slate-400 uppercase font-semibold">Педагогический K</div>
@@ -459,7 +429,6 @@
         </div>
       </div>
 
-      <!-- Radar Chart (Chart.js) -->
       <div class="bg-slate-900/50 border border-slate-700/60 p-4 rounded-xl">
         <div class="text-xs font-bold text-slate-300 uppercase mb-2">Профиль 6 векторов (в среднем по всем слётам)</div>
         <div class="h-60 flex items-center justify-center">
@@ -467,15 +436,11 @@
         </div>
       </div>
 
-      <!-- Camps Evaluation History -->
       <div class="space-y-2">
         <div class="text-xs font-bold text-slate-300 uppercase">История участий в слётах</div>
-        <div id="dosCampsHistory" class="space-y-2 max-h-40 overflow-y-auto pr-1">
-          <!-- Rendered dynamically -->
-        </div>
+        <div id="dosCampsHistory" class="space-y-2 max-h-40 overflow-y-auto pr-1"></div>
       </div>
 
-      <!-- Debrief Script -->
       <div class="p-3.5 rounded-xl bg-slate-900/70 border border-slate-700 space-y-1">
         <div class="text-xs font-bold text-indigo-300 uppercase flex items-center gap-1.5">
           <i data-lucide="message-square" class="w-4 h-4"></i> Рекомендация для дебрифинга 1-на-1
@@ -483,7 +448,6 @@
         <p class="text-xs text-slate-300 leading-relaxed" id="dosDebriefScript"></p>
       </div>
 
-      <!-- Signature block for printing -->
       <div class="print-only pt-8 grid grid-cols-2 gap-8 text-xs text-black">
         <div>Куратор слёта: ___________________ / _________________ /</div>
         <div>Руководитель смены: _______________ / _________________ /</div>
@@ -491,29 +455,23 @@
     </div>
   </div>
 
-  <!-- JAVASCRIPT APPLICATION LOGIC -->
+  <!-- SCRIPT LOGIC WITH YOUR FIREBASE CONFIG -->
   <script>
-    /* =====================================================================
-       1. КОНФИГУРАЦИЯ FIREBASE (Вставьте ваши ключи сюда!)
-       ===================================================================== */
     const FIREBASE_CONFIG = {
-      apiKey: "ВАШ_API_KEY",
-      authDomain: "ВАШ_PROJECT_ID.firebaseapp.com",
-      projectId: "ВАШ_PROJECT_ID",
-      storageBucket: "ВАШ_PROJECT_ID.appspot.com",
-      messagingSenderId: "ВАШ_MESSAGING_SENDER_ID",
-      appId: "ВАШ_APP_ID"
+      apiKey: "AIzaSyCCVxogvgq3ly3gQ9rPKsvhV1m38faHZyU",
+      authDomain: "campmetrix-web.firebaseapp.com",
+      projectId: "campmetrix-web",
+      storageBucket: "campmetrix-web.firebasestorage.app",
+      messagingSenderId: "239092051588",
+      appId: "1:239092051588:web:d0f31f9c45f0ea5ed55cd1"
     };
 
-    // State Variables
     let db = null;
-    let isCloudOnline = false;
     let staffList = [];
     let campsList = [];
     let evaluationsList = [];
     let radarChartInstance = null;
 
-    // Веса векторов по ролям
     const ROLE_WEIGHTS = {
       trainee:    { D: 0.25, A: 0.15, S: 0.20, T: 0.15, F: 0.05, L: 0.20, label: "Стажёр" },
       counselor:  { D: 0.15, A: 0.30, S: 0.25, T: 0.15, F: 0.10, L: 0.05, label: "Линейный вожатый" },
@@ -523,47 +481,17 @@
       admin:      { D: 0.35, A: 0.05, S: 0.25, T: 0.20, F: 0.10, L: 0.05, label: "Комендант / Техперсонал" }
     };
 
-    // Safe LocalStorage wrapper for Google Sites sandboxed iframes
-    function safeStorageGet(key, defaultVal) {
-      try {
-        const item = window.localStorage.getItem(key);
-        return item ? JSON.parse(item) : defaultVal;
-      } catch (e) {
-        return defaultVal;
-      }
-    }
-    function safeStorageSet(key, val) {
-      try {
-        window.localStorage.setItem(key, JSON.stringify(val));
-      } catch (e) {
-        // Iframe storage restricted
-      }
-    }
-
-    // App Initialization
     window.addEventListener('DOMContentLoaded', () => {
       lucide.createIcons();
-      initFirebaseOrFallback();
+      initFirebase();
     });
 
-    function initFirebaseOrFallback() {
-      const isPlaceholder = !FIREBASE_CONFIG.apiKey || FIREBASE_CONFIG.apiKey.includes("ВАШ_API_KEY");
-
-      if (isPlaceholder) {
-        // Fallback demo mode
-        document.getElementById('setupBanner').classList.remove('hidden');
-        document.getElementById('cloudStatusText').textContent = 'Демо (без облака)';
-        document.getElementById('cloudStatusDot').className = 'w-2 h-2 rounded-full bg-amber-400';
-        loadLocalFallbackData();
-        return;
-      }
-
+    function initFirebase() {
       try {
         if (!firebase.apps.length) {
           firebase.initializeApp(FIREBASE_CONFIG);
         }
         db = firebase.firestore();
-        isCloudOnline = true;
 
         document.getElementById('cloudStatusText').textContent = 'Cloud Firestore активен';
         document.getElementById('cloudStatus').className = 'flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-950/60 text-emerald-300 border border-emerald-500/40';
@@ -572,65 +500,46 @@
         subscribeToFirestoreCollections();
       } catch (err) {
         console.error("Firebase Init Error:", err);
-        document.getElementById('cloudStatusText').textContent = 'Ошибка БД';
+        document.getElementById('cloudStatusText').textContent = 'Ошибка подключения к БД';
         document.getElementById('cloudStatusDot').className = 'w-2 h-2 rounded-full bg-rose-500';
-        loadLocalFallbackData();
       }
     }
 
     function subscribeToFirestoreCollections() {
-      // 1. Camps
+      // Подписка на слёты
       db.collection('camps').onSnapshot(snap => {
         campsList = [];
         snap.forEach(doc => campsList.push({ id: doc.id, ...doc.data() }));
-        updateAllViews();
-      }, err => console.warn("Camps snapshot error", err));
+        if (campsList.length === 0 && staffList.length === 0) {
+          seedInitialCloudData();
+        } else {
+          updateAllViews();
+        }
+      }, err => console.warn("Camps error", err));
 
-      // 2. Staff
+      // Подписка на персонал
       db.collection('staff').onSnapshot(snap => {
         staffList = [];
         snap.forEach(doc => staffList.push({ id: doc.id, ...doc.data() }));
         updateAllViews();
-      }, err => console.warn("Staff snapshot error", err));
+      }, err => console.warn("Staff error", err));
 
-      // 3. Evaluations
+      // Подписка на оценки
       db.collection('evaluations').onSnapshot(snap => {
         evaluationsList = [];
         snap.forEach(doc => evaluationsList.push({ id: doc.id, ...doc.data() }));
         updateAllViews();
-      }, err => console.warn("Evals snapshot error", err));
+      }, err => console.warn("Evaluations error", err));
     }
 
-    function loadLocalFallbackData() {
-      staffList = safeStorageGet('cm_staff', []);
-      campsList = safeStorageGet('cm_camps', []);
-      evaluationsList = safeStorageGet('cm_evaluations', []);
-
-      if (staffList.length === 0 && campsList.length === 0) {
-        // Initial Demo Seed
-        campsList = [
-          { id: 'c1', name: 'Осенний слёт лидеров 2026', location: 'ДОЛ «Берёзка»', dates: '12–16 октября 2026' },
-          { id: 'c2', name: 'Творческий слёт «Перспектива»', location: 'База «Олимп»', dates: '22–26 октября 2026' }
-        ];
-        staffList = [
-          { id: 's1', name: 'Матвей Смирнов', nickname: 'Мот', primaryRole: 'universal', contact: '@mot_camp' },
-          { id: 's2', name: 'Полина Кузнецова', nickname: 'Поля', primaryRole: 'counselor', contact: '@polya_k' },
-          { id: 's3', name: 'Данила Архипов', nickname: 'Архип', primaryRole: 'sound', contact: '@arhip_dj' }
-        ];
-        evaluationsList = [
-          { id: 'e1', staffId: 's1', campId: 'c1', role: 'counselor', finalScore: 4.45, vectors: { D: 4.5, A: 4.6, S: 4.8, T: 4.2, F: 4.0, L: 4.5 } },
-          { id: 'e2', staffId: 's1', campId: 'c2', role: 'sound', finalScore: 4.60, vectors: { D: 4.8, A: 4.0, S: 4.7, T: 4.8, F: 4.5, L: 4.6 } },
-          { id: 'e3', staffId: 's2', campId: 'c1', role: 'counselor', finalScore: 4.20, vectors: { D: 4.0, A: 4.4, S: 4.5, T: 4.0, F: 3.8, L: 4.3 } },
-          { id: 'e4', staffId: 's3', campId: 'c2', role: 'sound', finalScore: 3.90, vectors: { D: 3.5, A: 3.0, S: 4.5, T: 3.8, F: 4.0, L: 4.0 } }
-        ];
-        safeStorageSet('cm_camps', campsList);
-        safeStorageSet('cm_staff', staffList);
-        safeStorageSet('cm_evaluations', evaluationsList);
-      }
-      updateAllViews();
+    function seedInitialCloudData() {
+      const initialCamp = { name: 'Первый лидерский слёт 2026', location: 'Главная база', dates: 'Сезон 2026' };
+      const initialStaff = { name: 'Алексей Смирнов', nickname: 'Капитан', primaryRole: 'counselor', contact: '@captain' };
+      
+      db.collection('camps').add(initialCamp);
+      db.collection('staff').add(initialStaff);
     }
 
-    // UI Tab Switching
     function switchTab(tabId) {
       document.querySelectorAll('main > section').forEach(sec => sec.classList.add('hidden'));
       document.getElementById(`tab-${tabId}`).classList.remove('hidden');
@@ -657,7 +566,6 @@
       lucide.createIcons();
     }
 
-    // Calculation Engine
     function calculateStaffMultiCampK(staffId) {
       const evals = evaluationsList.filter(e => e.staffId === staffId);
       if (evals.length === 0) {
@@ -689,7 +597,6 @@
       if (isStopListed) {
         overallK = 0;
       } else {
-        // Учёт фактора свежести смен (более поздние слёты имеют больший вес)
         let totalW = 0;
         let weightedSum = 0;
         evals.forEach((ev, idx) => {
@@ -700,7 +607,6 @@
         overallK = totalW > 0 ? (weightedSum / totalW) : 0;
       }
 
-      // Определение тренда
       let trend = '→ Стабильно';
       if (evals.length >= 2) {
         const first = evals[0].finalScore;
@@ -725,7 +631,6 @@
       };
     }
 
-    // Render Stats
     function renderSummaryCards() {
       document.getElementById('statTotalStaff').textContent = staffList.length;
       document.getElementById('statTotalCamps').textContent = campsList.length;
@@ -742,7 +647,6 @@
       document.getElementById('statStopList').textContent = stop;
     }
 
-    // Render Table
     function renderStaffRegistry() {
       const tbody = document.getElementById('staffTableBody');
       const search = document.getElementById('searchInput').value.toLowerCase();
@@ -823,7 +727,6 @@
       lucide.createIcons();
     }
 
-    // Wizard calculation
     function populateEvaluationDropdowns() {
       const campSelect = document.getElementById('evalCampSelect');
       const staffSelect = document.getElementById('evalStaffSelect');
@@ -858,7 +761,6 @@
       document.getElementById('val_F').textContent = F.toFixed(1);
       document.getElementById('val_L').textContent = L.toFixed(1);
 
-      // Stop factor check
       const isStop = document.getElementById('stopFactor').checked;
       if (isStop) {
         document.getElementById('wizardKResult').textContent = "0.00";
@@ -870,17 +772,14 @@
 
       let baseScore = (D * roleInfo.D) + (A * roleInfo.A) + (S * roleInfo.S) + (T * roleInfo.T) + (F * roleInfo.F) + (L * roleInfo.L);
 
-      // 360 Mode slight adjustment factor
       if (document.getElementById('eval360Mode').checked) {
         baseScore = (baseScore * 0.45) + (baseScore * 1.02 * 0.30) + (baseScore * 0.98 * 0.25);
       }
 
-      // Modifiers
       if (document.getElementById('modSolo').checked) baseScore += 0.30;
       if (document.getElementById('modHardAge').checked) baseScore += 0.20;
       if (document.getElementById('modSaveCamp').checked) baseScore += 0.20;
 
-      // Penalties
       if (document.getElementById('penLate').checked) baseScore -= 0.30;
       if (document.getElementById('penDisrupt').checked) baseScore -= 0.40;
 
@@ -902,7 +801,6 @@
       }
     }
 
-    // Save Evaluation
     function saveEvaluation(e) {
       e.preventDefault();
       const campId = document.getElementById('evalCampSelect').value;
@@ -932,24 +830,14 @@
         timestamp: Date.now()
       };
 
-      if (isCloudOnline && db) {
-        db.collection('evaluations').add(newEval).then(() => {
-          alert("Оценка успешно сохранена в Firebase Cloud!");
-          switchTab('registry');
-        }).catch(err => {
-          alert("Ошибка сохранения в Firebase: " + err.message);
-        });
-      } else {
-        newEval.id = 'eval_' + Date.now();
-        evaluationsList.push(newEval);
-        safeStorageSet('cm_evaluations', evaluationsList);
-        alert("Оценка зафиксирована локально!");
+      db.collection('evaluations').add(newEval).then(() => {
+        alert("Оценка успешно зафиксирована в облаке Firebase!");
         switchTab('registry');
-        updateAllViews();
-      }
+      }).catch(err => {
+        alert("Ошибка записи в базу: " + err.message);
+      });
     }
 
-    // Dossier Modal
     function viewDossier(staffId) {
       const member = staffList.find(s => s.id === staffId);
       if (!member) return;
@@ -977,7 +865,6 @@
         badge.className = "text-[10px] text-rose-400 font-bold";
       }
 
-      // History
       const userEvals = evaluationsList.filter(e => e.staffId === staffId);
       const histDiv = document.getElementById('dosCampsHistory');
       histDiv.innerHTML = '';
@@ -1001,7 +888,6 @@
         });
       }
 
-      // Debrief script
       const scriptBox = document.getElementById('dosDebriefScript');
       if (m.isStopListed) {
         scriptBox.innerHTML = `«Сотрудник дисквалифицирован за грубое нарушение техники безопасности или дисциплины слёта. Допуск на следующие смены закрыт.»`;
@@ -1076,7 +962,6 @@
       document.getElementById('dossierModal').classList.add('hidden');
     }
 
-    // Camps Rendering
     function renderCampsList() {
       const container = document.getElementById('campsList');
       container.innerHTML = '';
@@ -1095,7 +980,6 @@
       });
     }
 
-    // Staff and Camp Form Handlers
     function openStaffModal() { document.getElementById('staffModal').classList.remove('hidden'); }
     function closeStaffModal() { document.getElementById('staffModal').classList.add('hidden'); }
     function saveStaffMember(e) {
@@ -1107,16 +991,7 @@
         contact: document.getElementById('staffContactInput').value,
         createdAt: Date.now()
       };
-
-      if (isCloudOnline && db) {
-        db.collection('staff').add(newStaff).then(() => closeStaffModal());
-      } else {
-        newStaff.id = 'staff_' + Date.now();
-        staffList.push(newStaff);
-        safeStorageSet('cm_staff', staffList);
-        closeStaffModal();
-        updateAllViews();
-      }
+      db.collection('staff').add(newStaff).then(() => closeStaffModal());
     }
 
     function openCampModal() { document.getElementById('campModal').classList.remove('hidden'); }
@@ -1128,19 +1003,9 @@
         location: document.getElementById('campLocationInput').value,
         dates: document.getElementById('campDatesInput').value
       };
-
-      if (isCloudOnline && db) {
-        db.collection('camps').add(newCamp).then(() => closeCampModal());
-      } else {
-        newCamp.id = 'camp_' + Date.now();
-        campsList.push(newCamp);
-        safeStorageSet('cm_camps', campsList);
-        closeCampModal();
-        updateAllViews();
-      }
+      db.collection('camps').add(newCamp).then(() => closeCampModal());
     }
 
-    // Export CSV
     function exportCSV() {
       let csv = 'ФИО,Позывной,Контакты,Слётов,Педагогический K,Технический K,Общий K-Индекс,Статус\n';
       staffList.forEach(s => {
