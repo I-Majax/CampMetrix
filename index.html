@@ -47,7 +47,7 @@
             CampMetrix 360°
             <span class="text-[11px] font-normal px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Cloud Firebase</span>
           </h1>
-          <p class="text-xs text-slate-400">Кадровый реестр и мультиролевая оценка полезности персонала слётов</p>
+          <p class="text-xs text-slate-400">Кадровый реестр, управление составами слётов и оценка эффективности</p>
         </div>
       </div>
 
@@ -65,11 +65,11 @@
       <button onclick="switchTab('registry')" id="tabBtn-registry" class="tab-btn px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 bg-indigo-600 text-white whitespace-nowrap shadow-sm">
         <i data-lucide="users" class="w-4 h-4"></i> Реестр команды
       </button>
+      <button onclick="switchTab('camps')" id="tabBtn-camps" class="tab-btn px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 text-slate-400 hover:bg-slate-800 hover:text-slate-200 whitespace-nowrap">
+        <i data-lucide="tent" class="w-4 h-4"></i> Слёты и составы
+      </button>
       <button onclick="switchTab('evaluation')" id="tabBtn-evaluation" class="tab-btn px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 text-slate-400 hover:bg-slate-800 hover:text-slate-200 whitespace-nowrap">
         <i data-lucide="clipboard-check" class="w-4 h-4"></i> Мастер оценки 360°
-      </button>
-      <button onclick="switchTab('camps')" id="tabBtn-camps" class="tab-btn px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 text-slate-400 hover:bg-slate-800 hover:text-slate-200 whitespace-nowrap">
-        <i data-lucide="tent" class="w-4 h-4"></i> Слёты и смены
       </button>
     </div>
   </nav>
@@ -83,7 +83,7 @@
         <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 shadow-sm">
           <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Всего в базе</div>
           <div class="text-2xl sm:text-3xl font-extrabold text-white mt-1" id="statTotalStaff">0</div>
-          <div class="text-xs text-slate-500 mt-0.5">вожатых и сотрудников</div>
+          <div class="text-xs text-slate-500 mt-0.5">вожатых и специалистов</div>
         </div>
         <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 shadow-sm">
           <div class="text-[11px] font-semibold text-amber-400 uppercase tracking-wider">Золотой фонд (K ≥ 4.3)</div>
@@ -98,7 +98,7 @@
         <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 shadow-sm">
           <div class="text-[11px] font-semibold text-rose-400 uppercase tracking-wider">Стоп-лист</div>
           <div class="text-2xl sm:text-3xl font-extrabold text-rose-400 mt-1" id="statStopList">0</div>
-          <div class="text-xs text-slate-500 mt-0.5">критические стоп-факторы</div>
+          <div class="text-xs text-slate-500 mt-0.5">критические нарушения</div>
         </div>
       </div>
 
@@ -117,10 +117,10 @@
         </div>
         <div class="flex items-center gap-2">
           <button onclick="openStaffModal()" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-semibold transition flex items-center gap-1.5 shadow-sm">
-            <i data-lucide="user-plus" class="w-4 h-4"></i> Новый сотрудник
+            <i data-lucide="user-plus" class="w-4 h-4"></i> Добавить человека
           </button>
-          <button onclick="exportCSV()" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-sm font-medium transition flex items-center gap-1.5" title="Скачать таблицу для Excel">
-            <i data-lucide="download" class="w-4 h-4"></i> CSV
+          <button onclick="exportCSV()" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-sm font-medium transition flex items-center gap-1.5" title="Скачать CSV">
+            <i data-lucide="download" class="w-4 h-4"></i> Экспорт
           </button>
         </div>
       </div>
@@ -144,12 +144,33 @@
           </table>
         </div>
         <div id="emptyStaffNotice" class="hidden p-8 text-center text-slate-400 text-sm">
-          Сотрудники не найдены. Добавьте первого человека через кнопку «Новый сотрудник».
+          Сотрудники не найдены. Добавьте первого человека через кнопку «Добавить человека».
         </div>
       </div>
     </section>
 
-    <!-- TAB 2: EVALUATION WIZARD -->
+    <!-- TAB 2: CAMPS & ROSTERS -->
+    <section id="tab-camps" class="hidden space-y-6">
+      <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 sm:p-6 max-w-5xl mx-auto space-y-6 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700 pb-4">
+          <div>
+            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+              <i data-lucide="tent" class="text-indigo-400 w-6 h-6"></i> Слёты и выездные смены
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-400 mt-1">Формируйте состав участников для каждой смены, редактируйте даты и удаляйте завершенные проекты.</p>
+          </div>
+          <button onclick="openCampModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-semibold transition flex items-center gap-2 shadow-sm">
+            <i data-lucide="plus" class="w-4 h-4"></i> Создать новый слёт
+          </button>
+        </div>
+        <div id="campsList" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+        <div id="emptyCampsNotice" class="hidden p-8 text-center text-slate-400 text-sm">
+          Слёты пока не созданы. Нажмите «Создать новый слёт», чтобы начать формировать смену.
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: EVALUATION WIZARD -->
     <section id="tab-evaluation" class="hidden space-y-6">
       <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 sm:p-6 max-w-4xl mx-auto space-y-6 shadow-sm">
         <div class="border-b border-slate-700 pb-4">
@@ -164,7 +185,7 @@
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label class="block text-xs font-medium text-slate-300 mb-1">Слёт / Смена *</label>
-              <select id="evalCampSelect" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"></select>
+              <select id="evalCampSelect" required onchange="onEvalCampChanged()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"></select>
             </div>
             <div>
               <label class="block text-xs font-medium text-slate-300 mb-1">Сотрудник *</label>
@@ -309,34 +330,17 @@
       </div>
     </section>
 
-    <!-- TAB 3: CAMPS -->
-    <section id="tab-camps" class="hidden space-y-6">
-      <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 sm:p-6 max-w-4xl mx-auto space-y-6 shadow-sm">
-        <div class="flex items-center justify-between border-b border-slate-700 pb-4">
-          <div>
-            <h2 class="text-xl font-bold text-white flex items-center gap-2">
-              <i data-lucide="tent" class="text-indigo-400 w-6 h-6"></i> Слёты и выездные смены
-            </h2>
-            <p class="text-xs sm:text-sm text-slate-400 mt-1">Добавляйте проекты для раздельного учёта оценок команды.</p>
-          </div>
-          <button onclick="openCampModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-semibold transition flex items-center gap-2 shadow-sm">
-            <i data-lucide="plus" class="w-4 h-4"></i> Создать слёт
-          </button>
-        </div>
-        <div id="campsList" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-      </div>
-    </section>
-
   </main>
 
-  <!-- MODAL: ADD STAFF -->
+  <!-- MODAL: ADD / EDIT STAFF -->
   <div id="staffModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl">
       <div class="flex justify-between items-center border-b border-slate-700 pb-3">
-        <h3 class="text-lg font-bold text-white">Добавить сотрудника</h3>
+        <h3 class="text-lg font-bold text-white" id="staffModalTitle">Добавить сотрудника</h3>
         <button onclick="closeStaffModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
-      <form onsubmit="saveStaffMember(event)" class="space-y-4">
+      <form onsubmit="handleStaffSubmit(event)" class="space-y-4">
+        <input type="hidden" id="staffEditId" value="">
         <div>
           <label class="block text-xs font-medium text-slate-300 mb-1">ФИО *</label>
           <input type="text" id="staffNameInput" required placeholder="Иванов Алексей" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
@@ -346,7 +350,7 @@
           <input type="text" id="staffNicknameInput" placeholder="Лёха / Капитан" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
         </div>
         <div>
-          <label class="block text-xs font-medium text-slate-300 mb-1">Специализация по умолчанию</label>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Специализация</label>
           <select id="staffPrimaryRoleInput" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
             <option value="counselor">Линейный вожатый</option>
             <option value="trainee">Стажёр</option>
@@ -361,20 +365,21 @@
         </div>
         <div class="flex justify-end gap-2 pt-2 border-t border-slate-700">
           <button type="button" onclick="closeStaffModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-xs font-medium">Отмена</button>
-          <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold">Сохранить</button>
+          <button type="submit" id="staffModalSubmitBtn" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold">Сохранить</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- MODAL: ADD CAMP -->
+  <!-- MODAL: ADD / EDIT CAMP -->
   <div id="campModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl">
       <div class="flex justify-between items-center border-b border-slate-700 pb-3">
-        <h3 class="text-lg font-bold text-white">Создать новый слёт</h3>
+        <h3 class="text-lg font-bold text-white" id="campModalTitle">Создать новый слёт</h3>
         <button onclick="closeCampModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
-      <form onsubmit="saveCamp(event)" class="space-y-4">
+      <form onsubmit="handleCampSubmit(event)" class="space-y-4">
+        <input type="hidden" id="campEditId" value="">
         <div>
           <label class="block text-xs font-medium text-slate-300 mb-1">Название слёта / смены *</label>
           <input type="text" id="campNameInput" required placeholder="Осенний лидерский слёт 2026" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
@@ -389,9 +394,52 @@
         </div>
         <div class="flex justify-end gap-2 pt-2 border-t border-slate-700">
           <button type="button" onclick="closeCampModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-xs font-medium">Отмена</button>
-          <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold">Создать</button>
+          <button type="submit" id="campModalSubmitBtn" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold">Сохранить</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CAMP ROSTER (Управление списком людей на слёте) -->
+  <div id="rosterModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 hidden overflow-y-auto">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-2xl w-full p-5 sm:p-6 space-y-5 my-6 shadow-2xl">
+      <div class="flex justify-between items-start border-b border-slate-700 pb-3">
+        <div>
+          <h3 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2" id="rosterCampTitle">
+            <i data-lucide="users" class="text-indigo-400 w-5 h-5"></i> Состав команды слёта
+          </h3>
+          <p class="text-xs text-slate-400 mt-0.5" id="rosterCampMeta">Локация и даты</p>
+        </div>
+        <button onclick="closeRosterModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <!-- Add Person to Camp Roster -->
+      <div class="bg-slate-900/70 p-3.5 rounded-xl border border-slate-700/70 space-y-2">
+        <label class="block text-xs font-semibold text-slate-300">Добавить человека в состав слёта:</label>
+        <div class="flex flex-wrap sm:flex-nowrap gap-2">
+          <select id="rosterAddStaffSelect" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs sm:text-sm text-slate-100 focus:outline-none focus:border-indigo-500">
+            <!-- Dynamically populated -->
+          </select>
+          <button onclick="addSelectedStaffToRoster()" class="w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm">
+            <i data-lucide="user-plus" class="w-4 h-4"></i> Включить в состав
+          </button>
+        </div>
+      </div>
+
+      <!-- List of people enrolled -->
+      <div class="space-y-2">
+        <div class="flex justify-between items-center text-xs font-bold text-slate-400 uppercase tracking-wider">
+          <span>Сотрудники на этом слёте</span>
+          <span id="rosterCountBadge" class="text-indigo-400">0 человек</span>
+        </div>
+        <div id="rosterStaffList" class="space-y-2 max-h-64 overflow-y-auto pr-1">
+          <!-- Dynamically populated list -->
+        </div>
+      </div>
+
+      <div class="flex justify-end pt-2 border-t border-slate-700">
+        <button type="button" onclick="closeRosterModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-semibold">Готово</button>
+      </div>
     </div>
   </div>
 
@@ -455,7 +503,7 @@
     </div>
   </div>
 
-  <!-- SCRIPT LOGIC WITH YOUR FIREBASE CONFIG -->
+  <!-- SCRIPT LOGIC WITH FIREBASE -->
   <script>
     const FIREBASE_CONFIG = {
       apiKey: "AIzaSyCCVxogvgq3ly3gQ9rPKsvhV1m38faHZyU",
@@ -470,6 +518,7 @@
     let staffList = [];
     let campsList = [];
     let evaluationsList = [];
+    let activeRosterCampId = null;
     let radarChartInstance = null;
 
     const ROLE_WEIGHTS = {
@@ -514,6 +563,7 @@
           seedInitialCloudData();
         } else {
           updateAllViews();
+          if (activeRosterCampId) renderRosterModalContent(activeRosterCampId);
         }
       }, err => console.warn("Camps error", err));
 
@@ -522,6 +572,7 @@
         staffList = [];
         snap.forEach(doc => staffList.push({ id: doc.id, ...doc.data() }));
         updateAllViews();
+        if (activeRosterCampId) renderRosterModalContent(activeRosterCampId);
       }, err => console.warn("Staff error", err));
 
       // Подписка на оценки
@@ -529,11 +580,12 @@
         evaluationsList = [];
         snap.forEach(doc => evaluationsList.push({ id: doc.id, ...doc.data() }));
         updateAllViews();
+        if (activeRosterCampId) renderRosterModalContent(activeRosterCampId);
       }, err => console.warn("Evaluations error", err));
     }
 
     function seedInitialCloudData() {
-      const initialCamp = { name: 'Первый лидерский слёт 2026', location: 'Главная база', dates: 'Сезон 2026' };
+      const initialCamp = { name: 'Первый лидерский слёт 2026', location: 'Главная база', dates: 'Сезон 2026', roster: [] };
       const initialStaff = { name: 'Алексей Смирнов', nickname: 'Капитан', primaryRole: 'counselor', contact: '@captain' };
       
       db.collection('camps').add(initialCamp);
@@ -566,6 +618,275 @@
       lucide.createIcons();
     }
 
+    /* ---------------- STAFF CRUD ---------------- */
+    function openStaffModal(staffId = null) {
+      const modal = document.getElementById('staffModal');
+      const title = document.getElementById('staffModalTitle');
+      const submitBtn = document.getElementById('staffModalSubmitBtn');
+      const editInput = document.getElementById('staffEditId');
+
+      if (staffId) {
+        const member = staffList.find(s => s.id === staffId);
+        if (!member) return;
+        editInput.value = member.id;
+        document.getElementById('staffNameInput').value = member.name || '';
+        document.getElementById('staffNicknameInput').value = member.nickname || '';
+        document.getElementById('staffPrimaryRoleInput').value = member.primaryRole || 'counselor';
+        document.getElementById('staffContactInput').value = member.contact || '';
+        title.textContent = 'Редактировать сотрудника';
+        submitBtn.textContent = 'Обновить данные';
+      } else {
+        editInput.value = '';
+        document.getElementById('staffNameInput').value = '';
+        document.getElementById('staffNicknameInput').value = '';
+        document.getElementById('staffPrimaryRoleInput').value = 'counselor';
+        document.getElementById('staffContactInput').value = '';
+        title.textContent = 'Добавить сотрудника';
+        submitBtn.textContent = 'Сохранить';
+      }
+      modal.classList.remove('hidden');
+    }
+
+    function closeStaffModal() {
+      document.getElementById('staffModal').classList.add('hidden');
+    }
+
+    function handleStaffSubmit(e) {
+      e.preventDefault();
+      const editId = document.getElementById('staffEditId').value;
+      const data = {
+        name: document.getElementById('staffNameInput').value.trim(),
+        nickname: document.getElementById('staffNicknameInput').value.trim(),
+        primaryRole: document.getElementById('staffPrimaryRoleInput').value,
+        contact: document.getElementById('staffContactInput').value.trim()
+      };
+
+      if (editId) {
+        db.collection('staff').doc(editId).update(data).then(() => {
+          closeStaffModal();
+        }).catch(err => alert("Ошибка обновления: " + err.message));
+      } else {
+        data.createdAt = Date.now();
+        db.collection('staff').add(data).then(() => {
+          closeStaffModal();
+        }).catch(err => alert("Ошибка добавления: " + err.message));
+      }
+    }
+
+    function deleteStaff(staffId) {
+      const member = staffList.find(s => s.id === staffId);
+      if (!member) return;
+
+      const confirmText = `Вы действительно хотите удалить сотрудника "${member.name}"?\nВсе его оценки и участие в слётах также будут удалены!`;
+      if (!confirm(confirmText)) return;
+
+      // 1. Delete staff doc
+      db.collection('staff').doc(staffId).delete().then(() => {
+        // 2. Cascade delete evaluations
+        evaluationsList.filter(e => e.staffId === staffId).forEach(ev => {
+          db.collection('evaluations').doc(ev.id).delete();
+        });
+
+        // 3. Remove from all camp rosters
+        campsList.forEach(camp => {
+          if (camp.roster && camp.roster.includes(staffId)) {
+            const updated = camp.roster.filter(id => id !== staffId);
+            db.collection('camps').doc(camp.id).update({ roster: updated });
+          }
+        });
+      }).catch(err => alert("Ошибка удаления: " + err.message));
+    }
+
+    /* ---------------- CAMP CRUD & ROSTER ---------------- */
+    function openCampModal(campId = null) {
+      const modal = document.getElementById('campModal');
+      const title = document.getElementById('campModalTitle');
+      const submitBtn = document.getElementById('campModalSubmitBtn');
+      const editInput = document.getElementById('campEditId');
+
+      if (campId) {
+        const camp = campsList.find(c => c.id === campId);
+        if (!camp) return;
+        editInput.value = camp.id;
+        document.getElementById('campNameInput').value = camp.name || '';
+        document.getElementById('campLocationInput').value = camp.location || '';
+        document.getElementById('campDatesInput').value = camp.dates || '';
+        title.textContent = 'Редактировать слёт';
+        submitBtn.textContent = 'Обновить слёт';
+      } else {
+        editInput.value = '';
+        document.getElementById('campNameInput').value = '';
+        document.getElementById('campLocationInput').value = '';
+        document.getElementById('campDatesInput').value = '';
+        title.textContent = 'Создать новый слёт';
+        submitBtn.textContent = 'Создать слёт';
+      }
+      modal.classList.remove('hidden');
+    }
+
+    function closeCampModal() {
+      document.getElementById('campModal').classList.add('hidden');
+    }
+
+    function handleCampSubmit(e) {
+      e.preventDefault();
+      const editId = document.getElementById('campEditId').value;
+      const data = {
+        name: document.getElementById('campNameInput').value.trim(),
+        location: document.getElementById('campLocationInput').value.trim(),
+        dates: document.getElementById('campDatesInput').value.trim()
+      };
+
+      if (editId) {
+        db.collection('camps').doc(editId).update(data).then(() => {
+          closeCampModal();
+        }).catch(err => alert("Ошибка обновления: " + err.message));
+      } else {
+        data.roster = [];
+        data.createdAt = Date.now();
+        db.collection('camps').add(data).then(() => {
+          closeCampModal();
+        }).catch(err => alert("Ошибка создания слёта: " + err.message));
+      }
+    }
+
+    function deleteCamp(campId) {
+      const camp = campsList.find(c => c.id === campId);
+      if (!camp) return;
+
+      const confirmText = `Вы уверены, что хотите удалить слёт "${camp.name}"?\nВсе выставленные на нём оценки будут удалены!`;
+      if (!confirm(confirmText)) return;
+
+      db.collection('camps').doc(campId).delete().then(() => {
+        // Cascade delete evaluations
+        evaluationsList.filter(e => e.campId === campId).forEach(ev => {
+          db.collection('evaluations').doc(ev.id).delete();
+        });
+      }).catch(err => alert("Ошибка удаления: " + err.message));
+    }
+
+    /* ---------------- ROSTER MANAGEMENT (Люди на конкретный слёт) ---------------- */
+    function openRosterModal(campId) {
+      activeRosterCampId = campId;
+      renderRosterModalContent(campId);
+      document.getElementById('rosterModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeRosterModal() {
+      activeRosterCampId = null;
+      document.getElementById('rosterModal').classList.add('hidden');
+    }
+
+    function renderRosterModalContent(campId) {
+      const camp = campsList.find(c => c.id === campId);
+      if (!camp) return;
+
+      document.getElementById('rosterCampTitle').innerHTML = `<i data-lucide="users" class="text-indigo-400 w-5 h-5"></i> ${camp.name}`;
+      document.getElementById('rosterCampMeta').textContent = `Локация: ${camp.location || '—'} • Даты: ${camp.dates || '—'}`;
+
+      const roster = camp.roster || [];
+      document.getElementById('rosterCountBadge').textContent = `${roster.length} вожатых / сотрудников`;
+
+      // 1. Populate the Add select dropdown with staff NOT YET in this roster
+      const select = document.getElementById('rosterAddStaffSelect');
+      const availableStaff = staffList.filter(s => !roster.includes(s.id));
+      if (availableStaff.length === 0) {
+        select.innerHTML = '<option value="" disabled selected>Все сотрудники из базы уже добавлены в этот слёт</option>';
+      } else {
+        select.innerHTML = '<option value="" disabled selected>Выберите человека из общего реестра...</option>' +
+          availableStaff.map(s => `<option value="${s.id}">${s.name} ${s.nickname ? '«'+s.nickname+'»' : ''} (${ROLE_WEIGHTS[s.primaryRole]?.label || s.primaryRole})</option>`).join('');
+      }
+
+      // 2. Populate the roster list
+      const listContainer = document.getElementById('rosterStaffList');
+      listContainer.innerHTML = '';
+
+      if (roster.length === 0) {
+        listContainer.innerHTML = '<div class="p-6 text-center text-xs text-slate-500 bg-slate-900/40 rounded-xl border border-slate-800">В этот слёт пока никто не записан. Выберите сотрудника выше и нажмите «Включить в состав».</div>';
+        return;
+      }
+
+      roster.forEach(staffId => {
+        const staff = staffList.find(s => s.id === staffId);
+        if (!staff) return;
+
+        // Check if evaluated for this camp
+        const evalForCamp = evaluationsList.find(e => e.campId === campId && e.staffId === staffId);
+        const item = document.createElement('div');
+        item.className = 'flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 p-3 rounded-xl bg-slate-900/60 border border-slate-700/60 hover:border-slate-600 transition';
+
+        let statusHtml = '';
+        if (evalForCamp) {
+          statusHtml = `<span class="text-xs px-2 py-0.5 rounded font-bold ${evalForCamp.finalScore >= 4.3 ? 'bg-amber-950/80 text-amber-300 border border-amber-600/40' : (evalForCamp.finalScore >= 3.6 ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-600/40' : 'bg-rose-950/80 text-rose-300 border border-rose-600/40')}">K = ${evalForCamp.finalScore.toFixed(2)}</span>`;
+        } else {
+          statusHtml = `<span class="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">Ожидает оценки</span>`;
+        }
+
+        item.innerHTML = `
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-indigo-950 text-indigo-300 border border-indigo-700/40 flex items-center justify-center font-bold text-xs">
+              ${staff.name.charAt(0)}
+            </div>
+            <div>
+              <div class="font-bold text-sm text-white flex items-center gap-2">
+                ${staff.name}
+                ${staff.nickname ? '<span class="text-xs text-slate-400 font-normal">«'+staff.nickname+'»</span>' : ''}
+              </div>
+              <div class="text-[11px] text-slate-400">${ROLE_WEIGHTS[staff.primaryRole]?.label || staff.primaryRole}</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+            ${statusHtml}
+            <button onclick="evaluateFromRoster('${campId}', '${staff.id}')" class="px-2.5 py-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 text-xs font-medium transition flex items-center gap-1" title="Оценить за этот слёт">
+              <i data-lucide="award" class="w-3.5 h-3.5"></i> Оценить
+            </button>
+            <button onclick="removeStaffFromRoster('${campId}', '${staff.id}')" class="p-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900/80 text-rose-300 border border-rose-800/50 transition" title="Исключить со слёта">
+              <i data-lucide="user-minus" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        `;
+        listContainer.appendChild(item);
+      });
+      lucide.createIcons();
+    }
+
+    function addSelectedStaffToRoster() {
+      if (!activeRosterCampId) return;
+      const select = document.getElementById('rosterAddStaffSelect');
+      const staffId = select.value;
+      if (!staffId) return;
+
+      const camp = campsList.find(c => c.id === activeRosterCampId);
+      if (!camp) return;
+
+      const currentRoster = camp.roster || [];
+      if (!currentRoster.includes(staffId)) {
+        const updated = [...currentRoster, staffId];
+        db.collection('camps').doc(activeRosterCampId).update({ roster: updated }).catch(err => alert("Ошибка: " + err.message));
+      }
+    }
+
+    function removeStaffFromRoster(campId, staffId) {
+      const camp = campsList.find(c => c.id === campId);
+      const staff = staffList.find(s => s.id === staffId);
+      if (!camp || !staff) return;
+
+      if (!confirm(`Исключить ${staff.name} из состава слёта "${camp.name}"?`)) return;
+
+      const updated = (camp.roster || []).filter(id => id !== staffId);
+      db.collection('camps').doc(campId).update({ roster: updated }).catch(err => alert("Ошибка: " + err.message));
+    }
+
+    function evaluateFromRoster(campId, staffId) {
+      closeRosterModal();
+      switchTab('evaluation');
+      document.getElementById('evalCampSelect').value = campId;
+      document.getElementById('evalStaffSelect').value = staffId;
+      calculateWizardScore();
+    }
+
+    /* ---------------- EVALUATION & CALCULATIONS ---------------- */
     function calculateStaffMultiCampK(staffId) {
       const evals = evaluationsList.filter(e => e.staffId === staffId);
       if (evals.length === 0) {
@@ -720,9 +1041,67 @@
             <button onclick="quickEvaluate('${member.id}')" class="p-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition" title="Оценить за слёт">
               <i data-lucide="plus" class="w-4 h-4"></i>
             </button>
+            <button onclick="openStaffModal('${member.id}')" class="p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 transition" title="Редактировать человека">
+              <i data-lucide="pencil" class="w-4 h-4"></i>
+            </button>
+            <button onclick="deleteStaff('${member.id}')" class="p-1.5 rounded-lg bg-rose-950/50 hover:bg-rose-900 text-rose-300 border border-rose-800/40 transition" title="Удалить из базы">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
           </td>
         `;
         tbody.appendChild(tr);
+      });
+      lucide.createIcons();
+    }
+
+    function renderCampsList() {
+      const container = document.getElementById('campsList');
+      container.innerHTML = '';
+
+      if (campsList.length === 0) {
+        document.getElementById('emptyCampsNotice').classList.remove('hidden');
+        return;
+      }
+      document.getElementById('emptyCampsNotice').classList.add('hidden');
+
+      campsList.forEach(c => {
+        const rosterCount = (c.roster || []).length;
+        const evalsCount = evaluationsList.filter(e => e.campId === c.id).length;
+        const card = document.createElement('div');
+        card.className = 'bg-slate-900/60 border border-slate-700/60 p-4 sm:p-5 rounded-xl flex flex-col justify-between gap-4 hover:border-slate-600 transition shadow-sm';
+        card.innerHTML = `
+          <div>
+            <div class="flex items-start justify-between gap-2">
+              <div class="font-bold text-white text-base sm:text-lg">${c.name}</div>
+              <div class="flex items-center gap-1">
+                <button onclick="openCampModal('${c.id}')" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="Редактировать параметры слёта">
+                  <i data-lucide="pencil" class="w-4 h-4"></i>
+                </button>
+                <button onclick="deleteCamp('${c.id}')" class="p-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900 text-rose-400 border border-rose-800/40 transition" title="Удалить слёт">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+            <div class="text-xs text-slate-400 mt-1 flex flex-wrap gap-x-3 gap-y-1">
+              <span>📍 ${c.location || 'Локация не указана'}</span>
+              <span>📅 ${c.dates || 'Даты не указаны'}</span>
+            </div>
+            <div class="flex items-center gap-3 mt-3 pt-3 border-t border-slate-800 text-xs">
+              <span class="text-indigo-400 font-semibold flex items-center gap-1">
+                <i data-lucide="users" class="w-3.5 h-3.5"></i> В составе: ${rosterCount} чел.
+              </span>
+              <span class="text-emerald-400 font-semibold flex items-center gap-1">
+                <i data-lucide="award" class="w-3.5 h-3.5"></i> Оценено: ${evalsCount}
+              </span>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 pt-1">
+            <button onclick="openRosterModal('${c.id}')" class="flex-1 py-2 px-3 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 border border-indigo-500/30">
+              <i data-lucide="users" class="w-4 h-4"></i> Управление составом (${rosterCount})
+            </button>
+          </div>
+        `;
+        container.appendChild(card);
       });
       lucide.createIcons();
     }
@@ -732,8 +1111,35 @@
       const staffSelect = document.getElementById('evalStaffSelect');
       if (!campSelect || !staffSelect) return;
 
+      const currentCampVal = campSelect.value;
       campSelect.innerHTML = campsList.map(c => `<option value="${c.id}">${c.name} (${c.location || 'База'})</option>`).join('');
-      staffSelect.innerHTML = staffList.map(s => `<option value="${s.id}">${s.name} ${s.nickname ? '('+s.nickname+')' : ''}</option>`).join('');
+      if (currentCampVal && campsList.some(c => c.id === currentCampVal)) {
+        campSelect.value = currentCampVal;
+      }
+
+      onEvalCampChanged();
+    }
+
+    function onEvalCampChanged() {
+      const campSelect = document.getElementById('evalCampSelect');
+      const staffSelect = document.getElementById('evalStaffSelect');
+      if (!campSelect || !staffSelect) return;
+
+      const campId = campSelect.value;
+      const camp = campsList.find(c => c.id === campId);
+      const roster = camp?.roster || [];
+
+      // Sort staff: roster members first
+      let sorted = [...staffList].sort((a, b) => {
+        const aIn = roster.includes(a.id) ? 0 : 1;
+        const bIn = roster.includes(b.id) ? 0 : 1;
+        return aIn - bIn;
+      });
+
+      staffSelect.innerHTML = sorted.map(s => {
+        const inBadge = roster.includes(s.id) ? '⭐ [В составе]' : '';
+        return `<option value="${s.id}">${inBadge} ${s.name} ${s.nickname ? '('+s.nickname+')' : ''}</option>`;
+      }).join('');
     }
 
     function quickEvaluate(staffId) {
@@ -830,8 +1236,15 @@
         timestamp: Date.now()
       };
 
+      // Also ensure staff member is added to camp roster automatically
+      const camp = campsList.find(c => c.id === campId);
+      if (camp && (!camp.roster || !camp.roster.includes(staffId))) {
+        const updatedRoster = [...(camp.roster || []), staffId];
+        db.collection('camps').doc(campId).update({ roster: updatedRoster });
+      }
+
       db.collection('evaluations').add(newEval).then(() => {
-        alert("Оценка успешно зафиксирована в облаке Firebase!");
+        alert("Оценка успешно сохранена в базе Firebase!");
         switchTab('registry');
       }).catch(err => {
         alert("Ошибка записи в базу: " + err.message);
@@ -844,7 +1257,7 @@
 
       const m = calculateStaffMultiCampK(staffId);
       document.getElementById('dosName').textContent = member.name + (member.nickname ? ` («${member.nickname}»)` : '');
-      document.getElementById('dosMeta').textContent = `Специализация: ${member.primaryRole} • Контакт: ${member.contact || '—'}`;
+      document.getElementById('dosMeta').textContent = `Специализация: ${ROLE_WEIGHTS[member.primaryRole]?.label || member.primaryRole} • Контакт: ${member.contact || '—'}`;
 
       document.getElementById('dosPedK').textContent = m.pedK !== null ? m.pedK : '—';
       document.getElementById('dosTechK').textContent = m.techK !== null ? m.techK : '—';
@@ -960,50 +1373,6 @@
 
     function closeDossierModal() {
       document.getElementById('dossierModal').classList.add('hidden');
-    }
-
-    function renderCampsList() {
-      const container = document.getElementById('campsList');
-      container.innerHTML = '';
-      campsList.forEach(c => {
-        const evalsCount = evaluationsList.filter(e => e.campId === c.id).length;
-        const card = document.createElement('div');
-        card.className = 'bg-slate-900/60 border border-slate-700/60 p-4 rounded-xl flex items-center justify-between';
-        card.innerHTML = `
-          <div>
-            <div class="font-bold text-white text-base">${c.name}</div>
-            <div class="text-xs text-slate-400 mt-0.5">Локация: ${c.location || '—'} • ${c.dates || 'Даты не указаны'}</div>
-            <div class="text-[11px] text-indigo-400 mt-2 font-medium">Оценено сотрудников: ${evalsCount}</div>
-          </div>
-        `;
-        container.appendChild(card);
-      });
-    }
-
-    function openStaffModal() { document.getElementById('staffModal').classList.remove('hidden'); }
-    function closeStaffModal() { document.getElementById('staffModal').classList.add('hidden'); }
-    function saveStaffMember(e) {
-      e.preventDefault();
-      const newStaff = {
-        name: document.getElementById('staffNameInput').value,
-        nickname: document.getElementById('staffNicknameInput').value,
-        primaryRole: document.getElementById('staffPrimaryRoleInput').value,
-        contact: document.getElementById('staffContactInput').value,
-        createdAt: Date.now()
-      };
-      db.collection('staff').add(newStaff).then(() => closeStaffModal());
-    }
-
-    function openCampModal() { document.getElementById('campModal').classList.remove('hidden'); }
-    function closeCampModal() { document.getElementById('campModal').classList.add('hidden'); }
-    function saveCamp(e) {
-      e.preventDefault();
-      const newCamp = {
-        name: document.getElementById('campNameInput').value,
-        location: document.getElementById('campLocationInput').value,
-        dates: document.getElementById('campDatesInput').value
-      };
-      db.collection('camps').add(newCamp).then(() => closeCampModal());
     }
 
     function exportCSV() {
