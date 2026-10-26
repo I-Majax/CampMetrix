@@ -188,7 +188,7 @@
 
     <!-- TAB 2: CAMPS -->
     <section id="tab-camps" class="hidden space-y-4 sm:space-y-6">
-      <div class="bg-slate-800/70 border border-slate-700/60 rounded-xl p-4 sm:p-6 space-y-4 shadow-sm">
+      <div class="bg-slate-800/70 border border-slate-700/60 rounded-xl p-3 sm:p-6 space-y-4 shadow-sm">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-700/60 pb-3">
           <div>
             <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
@@ -196,13 +196,19 @@
             </h2>
             <p class="text-xs text-slate-400 mt-0.5">Управление составом команд, датами выездов и анализ эффективности смен.</p>
           </div>
-          <button onclick="openCampModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-1.5 shadow-sm">
+          <button onclick="openCampModal()" class="w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-1.5 shadow-sm">
             <i data-lucide="plus" class="w-4 h-4"></i> Создать новый слёт
           </button>
         </div>
-        <div id="campsList" class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4"></div>
-        <div id="emptyCampsNotice" class="hidden p-8 text-center text-slate-400 text-sm bg-slate-900/40 rounded-xl border border-slate-800">
-          Слёты пока не созданы. Нажмите «Создать новый слёт», чтобы начать формировать смену.
+
+        <!-- Camps List Container (Clean responsive grid for mobile and desktop) -->
+        <div id="campsList" class="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4"></div>
+        
+        <div id="emptyCampsNotice" class="hidden p-8 text-center text-slate-400 text-sm bg-slate-900/40 rounded-xl border border-slate-800 space-y-3">
+          <p>Слёты пока не созданы.</p>
+          <button onclick="openCampModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold inline-flex items-center gap-1.5">
+            <i data-lucide="plus" class="w-4 h-4"></i> Создать первый слёт
+          </button>
         </div>
       </div>
     </section>
@@ -234,7 +240,6 @@
           <select id="step1StaffSelect" onchange="checkStep1EvaluationStatus()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-slate-100 focus:outline-none focus:border-indigo-500"></select>
         </div>
 
-        <!-- Dynamic Status Box -->
         <div id="step1StatusBox" class="p-3 rounded-xl border text-xs leading-relaxed transition-all"></div>
       </div>
 
@@ -606,7 +611,7 @@
     </div>
   </div>
 
-  <!-- MODAL: ADD / EDIT STAFF (С ИНТЕГРАЦИЕЙ С АДРЕСНОЙ КНИГОЙ И SAFARI) -->
+  <!-- MODAL: ADD / EDIT STAFF -->
   <div id="staffModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 hidden">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-xl">
       <div class="flex justify-between items-center border-b border-slate-700 pb-3">
@@ -614,7 +619,7 @@
         <button onclick="closeStaffModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
 
-      <!-- Кнопка импорта из адресной книги устройства (Contact Picker / Safari vCard) -->
+      <!-- Кнопка импорта из адресной книги (Contact Picker / Safari vCard) -->
       <div class="bg-indigo-950/40 border border-indigo-500/30 rounded-xl p-2.5 flex items-center justify-between gap-2">
         <div class="flex items-center gap-2 text-xs text-indigo-200">
           <i data-lucide="contact" class="w-4 h-4 text-indigo-400 flex-shrink-0"></i>
@@ -624,7 +629,6 @@
           <i data-lucide="phone-call" class="w-3.5 h-3.5"></i>
           <span>Выбрать</span>
         </button>
-        <!-- Скрытый инпут для vCard (.vcf) fallback для Safari / iOS -->
         <input type="file" id="vcfContactInput" accept=".vcf,text/vcard,text/x-vcard" class="hidden" onchange="handleVcfFileSelected(event)">
       </div>
 
@@ -663,7 +667,7 @@
     </div>
   </div>
 
-  <!-- MODAL: ADD / EDIT CAMP -->
+  <!-- MODAL: ADD / EDIT CAMP (СТРОГОЕ ДАТИРОВАНИЕ ЧЕРЕЗ TYPE="DATE") -->
   <div id="campModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 hidden">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-xl">
       <div class="flex justify-between items-center border-b border-slate-700 pb-3">
@@ -680,10 +684,19 @@
           <label class="block text-xs font-medium text-slate-300 mb-1">База / Локация</label>
           <input type="text" id="campLocationInput" placeholder="ДОЛ «Лесной»" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500">
         </div>
-        <div>
-          <label class="block text-xs font-medium text-slate-300 mb-1">Даты проведения</label>
-          <input type="text" id="campDatesInput" placeholder="24–28 октября 2026" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500">
+        
+        <!-- Даты проведения: сохраняются как календарные даты -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Дата начала *</label>
+            <input type="date" id="campStartDateInput" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Дата окончания *</label>
+            <input type="date" id="campEndDateInput" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500">
+          </div>
         </div>
+
         <div class="flex justify-end gap-2 pt-2 border-t border-slate-700">
           <button type="button" onclick="closeCampModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-xs font-medium">Отмена</button>
           <button type="submit" id="campModalSubmitBtn" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold">Сохранить</button>
@@ -804,7 +817,6 @@
 
     /* ================= CONTACT PICKER & SAFARI INTEGRATION ================= */
     async function pickFromContacts() {
-      // 1. Android / Chrome нативный Contact Picker API
       if ('contacts' in navigator && 'ContactsManager' in window) {
         try {
           const props = ['name', 'tel'];
@@ -817,7 +829,7 @@
             if (c.tel && c.tel.length > 0) {
               document.getElementById('staffContactInput').value = c.tel[0];
             }
-            showToast("Контакт успешно загружен из телефонной книги!", "success");
+            showToast("Контакт загружен из телефонной книги!", "success");
             return;
           }
         } catch (err) {
@@ -825,13 +837,10 @@
         }
       }
 
-      // 2. Safari / iOS & Desktop fallback: открытие диалога vCard (.vcf)
-      // В Safari Apple блокирует прямой доступ скрипта к книжке, но поддерживает импорт vCard и автозаполнение QuickType
-      showToast("В Safari: выберите карточку (.vcf) или нажмите на поле телефона для подсказки клавиатуры", "info");
+      showToast("В Safari: выберите .vcf или нажмите на поле телефона для клавиатуры", "info");
       document.getElementById('vcfContactInput').click();
     }
 
-    // Обработка vCard файла, выбранного пользователем в Safari / других браузерах
     function handleVcfFileSelected(event) {
       const file = event.target.files?.[0];
       if (!file) return;
@@ -852,16 +861,15 @@
         }
 
         if (filledCount > 0) {
-          showToast(`Контакт успешно импортирован (${parsed.name || parsed.tel})`, "success");
+          showToast(`Контакт импортирован (${parsed.name || parsed.tel})`, "success");
         } else {
-          showToast("Не удалось извлечь имя или номер из файла vCard", "error");
+          showToast("Не удалось извлечь имя или номер из vCard", "error");
         }
-        event.target.value = ''; // сброс
+        event.target.value = '';
       };
       reader.readAsText(file);
     }
 
-    // Простой и надежный парсер vCard 2.1 / 3.0 / 4.0
     function parseVcfContact(vcfText) {
       let name = '';
       let tel = '';
@@ -869,11 +877,9 @@
 
       for (let line of lines) {
         line = line.trim();
-        // Имя
         if (!name && (line.startsWith('FN:') || line.startsWith('FN;'))) {
           name = line.substring(line.indexOf(':') + 1).trim();
         }
-        // Телефон
         if (!tel && line.startsWith('TEL')) {
           tel = line.substring(line.indexOf(':') + 1).trim();
         }
@@ -931,15 +937,26 @@
     /* ================= TABS ================= */
     function switchTab(tabId) {
       document.querySelectorAll('main > section').forEach(sec => sec.classList.add('hidden'));
-      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+      const targetSec = document.getElementById(`tab-${tabId}`);
+      if (targetSec) targetSec.classList.remove('hidden');
 
       document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.remove('bg-indigo-600', 'text-white');
         btn.classList.add('text-slate-400');
       });
       const activeBtn = document.getElementById(`tabBtn-${tabId}`);
-      activeBtn.classList.add('bg-indigo-600', 'text-white');
-      activeBtn.classList.remove('text-slate-400');
+      if (activeBtn) {
+        activeBtn.classList.add('bg-indigo-600', 'text-white');
+        activeBtn.classList.remove('text-slate-400');
+      }
+
+      // Всегда явно обновляем содержимое открытой вкладки
+      if (tabId === 'camps') {
+        renderCampsList();
+      } else if (tabId === 'registry') {
+        renderStaffRegistry();
+      }
+      lucide.createIcons();
     }
 
     function updateAllViews() {
@@ -949,10 +966,41 @@
       lucide.createIcons();
     }
 
-    /* ================= ROBUST EVALUATION & K CALCULATION ================= */
+    /* ================= FORMATTING DATES ================= */
+    function formatCampDateRange(camp) {
+      if (!camp) return 'Даты не указаны';
+
+      if (camp.startDate && camp.endDate) {
+        const s = new Date(camp.startDate);
+        const e = new Date(camp.endDate);
+        if (!isNaN(s.getTime()) && !isNaN(e.getTime())) {
+          const sDay = s.getDate();
+          const eDay = e.getDate();
+          const sMonth = s.toLocaleDateString('ru-RU', { month: 'short' });
+          const eMonth = e.toLocaleDateString('ru-RU', { month: 'short' });
+          const sYear = s.getFullYear();
+          const eYear = e.getFullYear();
+
+          if (sYear === eYear && sMonth === eMonth) {
+            return `${sDay}–${eDay} ${eMonth} ${eYear}`;
+          } else if (sYear === eYear) {
+            return `${sDay} ${sMonth} – ${eDay} ${eMonth} ${eYear}`;
+          } else {
+            return `${s.toLocaleDateString('ru-RU')} – ${e.toLocaleDateString('ru-RU')}`;
+          }
+        }
+      } else if (camp.startDate) {
+        const s = new Date(camp.startDate);
+        if (!isNaN(s.getTime())) return `с ${s.toLocaleDateString('ru-RU')}`;
+      }
+      // Обратная совместимость, если в базе ещё остался строковый формат
+      return camp.dates || 'Даты не указаны';
+    }
+
+    /* ================= EVALUATIONS & K CALCULATION ================= */
     function getCampEvaluations(campId) {
       const camp = campsList.find(c => c.id === campId);
-      const roster = camp?.roster || [];
+      const roster = Array.isArray(camp?.roster) ? camp.roster : [];
       const evals = evaluationsList.filter(e => e.campId === campId);
 
       const validMap = new Map();
@@ -974,7 +1022,8 @@
       const campEvalMap = new Map();
       rawEvals.forEach(ev => {
         const camp = campsList.find(c => c.id === ev.campId);
-        const inRoster = !camp?.roster || camp.roster.length === 0 || camp.roster.includes(staffId);
+        const roster = Array.isArray(camp?.roster) ? camp.roster : [];
+        const inRoster = roster.length === 0 || roster.includes(staffId);
         if (inRoster) {
           if (!campEvalMap.has(ev.campId) || (ev.timestamp || 0) > (campEvalMap.get(ev.campId).timestamp || 0)) {
             campEvalMap.set(ev.campId, ev);
@@ -997,7 +1046,14 @@
         };
       }
 
-      evals.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+      // ХРОНОЛОГИЧЕСКАЯ СОРТИРОВКА: по дате начала слёта (startDate), либо по timestamp
+      evals.sort((a, b) => {
+        const campA = campsList.find(c => c.id === a.campId);
+        const campB = campsList.find(c => c.id === b.campId);
+        const timeA = (campA && campA.startDate) ? new Date(campA.startDate).getTime() : (a.timestamp || 0);
+        const timeB = (campB && campB.startDate) ? new Date(campB.startDate).getTime() : (b.timestamp || 0);
+        return timeA - timeB;
+      });
 
       let isStopListed = false;
       const pedScores = [];
@@ -1051,6 +1107,7 @@
         overallK = totalW > 0 ? parseFloat((weightedSum / totalW).toFixed(2)) : 0;
       }
 
+      // ТРЕНД: точное сравнение последнего слёта с предпоследним
       let trend = '—';
       if (evals.length >= 2) {
         const latestScore = evals[evals.length - 1].finalScore;
@@ -1107,12 +1164,14 @@
     }
 
     function renderStaffRegistry() {
-      const search = document.getElementById('searchInput').value.toLowerCase();
-      const roleFilter = document.getElementById('roleFilter').value;
-      currentSort = document.getElementById('sortSelect').value;
+      const search = (document.getElementById('searchInput')?.value || '').toLowerCase();
+      const roleFilter = document.getElementById('roleFilter')?.value || 'all';
+      currentSort = document.getElementById('sortSelect')?.value || 'k_desc';
 
       let filtered = staffList.filter(s => {
-        const matchesSearch = s.name.toLowerCase().includes(search) || (s.nickname && s.nickname.toLowerCase().includes(search));
+        const nameStr = (s.name || '').toLowerCase();
+        const nickStr = (s.nickname || '').toLowerCase();
+        const matchesSearch = nameStr.includes(search) || nickStr.includes(search);
         if (!matchesSearch) return false;
 
         const m = calculateStaffMultiCampK(s.id);
@@ -1128,7 +1187,7 @@
         const mb = calculateStaffMultiCampK(b.id);
         if (currentSort === 'k_desc') return mb.overallK - ma.overallK;
         if (currentSort === 'k_asc') return ma.overallK - mb.overallK;
-        if (currentSort === 'name_asc') return a.name.localeCompare(b.name, 'ru');
+        if (currentSort === 'name_asc') return (a.name || '').localeCompare(b.name || '', 'ru');
         if (currentSort === 'camps_desc') return mb.count - ma.count;
         if (currentSort === 'ped_desc') return (mb.pedK || 0) - (ma.pedK || 0);
         if (currentSort === 'org_desc') return (mb.orgK || 0) - (ma.orgK || 0);
@@ -1138,9 +1197,9 @@
 
       const emptyNotice = document.getElementById('emptyStaffNotice');
       if (filtered.length === 0) {
-        emptyNotice.classList.remove('hidden');
+        emptyNotice?.classList.remove('hidden');
       } else {
-        emptyNotice.classList.add('hidden');
+        emptyNotice?.classList.add('hidden');
       }
 
       renderDesktopTable(filtered);
@@ -1166,6 +1225,7 @@
 
     function renderDesktopTable(list) {
       const tbody = document.getElementById('staffTableBody');
+      if (!tbody) return;
       tbody.innerHTML = '';
 
       list.forEach(member => {
@@ -1177,7 +1237,7 @@
         tr.innerHTML = `
           <td class="py-3 px-4">
             <div class="font-bold text-white flex items-center gap-1.5">
-              ${member.name}
+              ${member.name || 'Без имени'}
               ${member.nickname ? '<span class="text-xs text-slate-400 font-normal">«'+member.nickname+'»</span>' : ''}
             </div>
             <div class="text-xs text-slate-400">${ROLE_WEIGHTS[member.primaryRole]?.label || member.primaryRole}</div>
@@ -1216,6 +1276,7 @@
 
     function renderMobileCards(list) {
       const container = document.getElementById('staffCardsContainer');
+      if (!container) return;
       container.innerHTML = '';
 
       list.forEach(member => {
@@ -1228,7 +1289,7 @@
           <div class="flex items-start justify-between gap-2">
             <div>
               <div class="font-bold text-white text-sm flex items-center gap-1.5">
-                ${member.name}
+                ${member.name || 'Без имени'}
                 ${member.nickname ? '<span class="text-xs text-slate-400 font-normal">«'+member.nickname+'»</span>' : ''}
               </div>
               <div class="text-[11px] text-slate-400 mt-0.5">${ROLE_WEIGHTS[member.primaryRole]?.label || member.primaryRole} • ${member.contact || 'Нет контакта'}</div>
@@ -1281,6 +1342,93 @@
       });
     }
 
+    /* ================= CAMPS LIST & METRICS (MOBILE OPTIMIZED) ================= */
+    function renderCampsList() {
+      const container = document.getElementById('campsList');
+      const emptyNotice = document.getElementById('emptyCampsNotice');
+      if (!container) return;
+
+      container.innerHTML = '';
+
+      if (campsList.length === 0) {
+        if (emptyNotice) emptyNotice.classList.remove('hidden');
+        container.classList.add('hidden');
+        return;
+      }
+      
+      if (emptyNotice) emptyNotice.classList.add('hidden');
+      container.classList.remove('hidden');
+
+      // Сортировка слётов по дате начала (свежие сверху)
+      const sortedCamps = [...campsList].sort((a, b) => {
+        const timeA = a.startDate ? new Date(a.startDate).getTime() : (a.createdAt || 0);
+        const timeB = b.startDate ? new Date(b.startDate).getTime() : (b.createdAt || 0);
+        return timeB - timeA;
+      });
+
+      sortedCamps.forEach(c => {
+        const rosterCount = (Array.isArray(c.roster) ? c.roster : []).length;
+        const campEvals = getCampEvaluations(c.id);
+        const evalsCount = campEvals.length;
+        
+        let avgScore = '—';
+        if (campEvals.length > 0) {
+          const sum = campEvals.reduce((acc, curr) => acc + curr.finalScore, 0);
+          avgScore = (sum / campEvals.length).toFixed(2);
+        }
+
+        const dateRangeStr = formatCampDateRange(c);
+
+        const card = document.createElement('div');
+        card.className = 'bg-slate-800/80 border border-slate-700/60 p-3.5 sm:p-4 rounded-xl flex flex-col justify-between gap-3 shadow-sm hover:border-slate-600 transition';
+        card.innerHTML = `
+          <div>
+            <div class="flex items-start justify-between gap-2">
+              <div class="font-bold text-white text-sm sm:text-base leading-tight">${c.name || 'Слёт без названия'}</div>
+              <div class="flex items-center gap-1 flex-shrink-0">
+                <button onclick="openCampModal('${c.id}')" class="p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition" title="Редактировать слёт">
+                  <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                </button>
+                <button onclick="deleteCamp('${c.id}')" class="p-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900 text-rose-400 border border-rose-800/40 transition" title="Удалить слёт">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </div>
+            
+            <div class="text-[11px] text-slate-400 mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+              <span class="flex items-center gap-1">📍 ${c.location || 'Локация не указана'}</span>
+              <span class="flex items-center gap-1 text-indigo-300">📅 ${dateRangeStr}</span>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-2 mt-3 pt-2.5 border-t border-slate-700/60 text-xs">
+              <div class="flex items-center gap-3">
+                <span class="text-indigo-400 font-semibold flex items-center gap-1">
+                  <i data-lucide="users" class="w-3.5 h-3.5"></i> Состав: ${rosterCount}
+                </span>
+                <span class="text-emerald-400 font-semibold flex items-center gap-1">
+                  <i data-lucide="award" class="w-3.5 h-3.5"></i> Оценено: ${evalsCount}
+                </span>
+              </div>
+              <span class="text-amber-300 font-bold ml-auto">
+                Средний K: ${avgScore}
+              </span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <button onclick="openRosterModal('${c.id}')" class="py-2 px-2 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 border border-indigo-500/30">
+              <i data-lucide="users" class="w-3.5 h-3.5"></i> Состав (${rosterCount})
+            </button>
+            <button onclick="viewCampDossier('${c.id}')" class="py-2 px-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5">
+              <i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i> Досье слёта
+            </button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+      lucide.createIcons();
+    }
+
     /* ================= 2-STEP EVALUATION WORKFLOW ================= */
     function startEvaluationFlow(campId = null, staffId = null) {
       if (campsList.length === 0) {
@@ -1295,13 +1443,13 @@
       const campSelect = document.getElementById('step1CampSelect');
       const staffSelect = document.getElementById('step1StaffSelect');
 
-      campSelect.innerHTML = campsList.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+      campSelect.innerHTML = campsList.map(c => `<option value="${c.id}">${c.name} (${formatCampDateRange(c)})</option>`).join('');
       if (campId && campsList.some(c => c.id === campId)) {
         campSelect.value = campId;
       }
 
       staffSelect.innerHTML = staffList.map(s => {
-        return `<option value="${s.id}">${s.name} ${s.nickname ? '«'+s.nickname+'»' : ''} (${ROLE_WEIGHTS[s.primaryRole]?.label || s.primaryRole})</option>`;
+        return `<option value="${s.id}">${s.name || 'Без имени'} ${s.nickname ? '«'+s.nickname+'»' : ''} (${ROLE_WEIGHTS[s.primaryRole]?.label || s.primaryRole})</option>`;
       }).join('');
       if (staffId && staffList.some(s => s.id === staffId)) {
         staffSelect.value = staffId;
@@ -1330,7 +1478,8 @@
       const existing = evaluationsList.find(e => e.campId === campId && e.staffId === staffId);
       const camp = campsList.find(c => c.id === campId);
       const staff = staffList.find(s => s.id === staffId);
-      const isEnrolledInRoster = camp?.roster && camp.roster.includes(staffId);
+      const roster = Array.isArray(camp?.roster) ? camp.roster : [];
+      const isEnrolledInRoster = roster.includes(staffId);
 
       if (existing) {
         statusBox.className = 'p-3 rounded-xl border border-amber-500/40 bg-amber-950/40 text-amber-200 text-xs leading-relaxed';
@@ -1574,8 +1723,9 @@
       };
 
       const camp = campsList.find(c => c.id === campId);
-      if (camp && (!camp.roster || !camp.roster.includes(staffId))) {
-        const updatedRoster = [...(camp.roster || []), staffId];
+      const roster = Array.isArray(camp?.roster) ? camp.roster : [];
+      if (camp && !roster.includes(staffId)) {
+        const updatedRoster = [...roster, staffId];
         db.collection('camps').doc(campId).update({ roster: updatedRoster });
       }
 
@@ -1605,7 +1755,7 @@
       if (!member) return;
 
       const m = calculateStaffMultiCampK(staffId);
-      document.getElementById('dosName').textContent = member.name + (member.nickname ? ` («${member.nickname}»)` : '');
+      document.getElementById('dosName').textContent = (member.name || 'Без имени') + (member.nickname ? ` («${member.nickname}»)` : '');
       document.getElementById('dosMeta').textContent = `Специализация: ${ROLE_WEIGHTS[member.primaryRole]?.label || member.primaryRole} • Контакт: ${member.contact || '—'}`;
 
       document.getElementById('dosPedK').textContent = m.pedK !== null ? m.pedK : '—';
@@ -1643,7 +1793,7 @@
           item.innerHTML = `
             <div>
               <div class="font-bold text-white">${c.name}</div>
-              <div class="text-slate-400">${ROLE_WEIGHTS[ev.role]?.label || ev.role}</div>
+              <div class="text-slate-400">${ROLE_WEIGHTS[ev.role]?.label || ev.role} • ${formatCampDateRange(c)}</div>
             </div>
             <div class="flex items-center gap-2">
               <span class="font-black text-sm ${ev.finalScore >= 4.3 ? 'text-amber-400' : (ev.finalScore >= 3.6 ? 'text-emerald-400' : 'text-rose-400')}">
@@ -1741,9 +1891,9 @@
       if (!camp) return;
 
       document.getElementById('campDosTitle').innerHTML = `<i data-lucide="tent" class="text-indigo-400 w-5 h-5"></i> ${camp.name}`;
-      document.getElementById('campDosMeta').textContent = `Локация: ${camp.location || '—'} • Даты: ${camp.dates || '—'}`;
+      document.getElementById('campDosMeta').textContent = `Локация: ${camp.location || '—'} • Даты: ${formatCampDateRange(camp)}`;
 
-      const roster = camp.roster || [];
+      const roster = Array.isArray(camp.roster) ? camp.roster : [];
       const campEvals = getCampEvaluations(campId);
       
       document.getElementById('campDosRosterCount').textContent = roster.length;
@@ -1759,7 +1909,7 @@
 
         campEvals.forEach(ev => {
           if (ev.vectors) {
-            for (let k in teamVectors) teamVectors[k] += (ev.vectors[k] || 4.0);
+            for (let k in teamVectors) teamVectors[k] += (Number(ev.vectors[k]) || 4.0);
           }
         });
         for (let k in teamVectors) teamVectors[k] = parseFloat((teamVectors[k] / campEvals.length).toFixed(1));
@@ -1805,7 +1955,7 @@
           item.innerHTML = `
             <div>
               <div class="font-bold text-white flex items-center gap-1.5">
-                ${staff.name} ${staff.nickname ? '«'+staff.nickname+'»' : ''}
+                ${staff.name || 'Без имени'} ${staff.nickname ? '«'+staff.nickname+'»' : ''}
               </div>
               <div class="text-[11px] text-slate-400">${ROLE_WEIGHTS[staff.primaryRole]?.label || staff.primaryRole}</div>
             </div>
@@ -1884,9 +2034,9 @@
       if (!camp) return;
 
       document.getElementById('rosterCampTitle').innerHTML = `<i data-lucide="users" class="text-indigo-400 w-5 h-5"></i> ${camp.name}`;
-      document.getElementById('rosterCampMeta').textContent = `Локация: ${camp.location || '—'} • Даты: ${camp.dates || '—'}`;
+      document.getElementById('rosterCampMeta').textContent = `Локация: ${camp.location || '—'} • Даты: ${formatCampDateRange(camp)}`;
 
-      const roster = camp.roster || [];
+      const roster = Array.isArray(camp.roster) ? camp.roster : [];
       document.getElementById('rosterCountBadge').textContent = `${roster.length} человек`;
 
       const select = document.getElementById('rosterAddStaffSelect');
@@ -1895,7 +2045,7 @@
         select.innerHTML = '<option value="" disabled selected>Все люди из реестра уже добавлены</option>';
       } else {
         select.innerHTML = '<option value="" disabled selected>Выберите человека из реестра...</option>' +
-          available.map(s => `<option value="${s.id}">${s.name} ${s.nickname ? '«'+s.nickname+'»' : ''}</option>`).join('');
+          available.map(s => `<option value="${s.id}">${s.name || 'Без имени'} ${s.nickname ? '«'+s.nickname+'»' : ''}</option>`).join('');
       }
 
       const listContainer = document.getElementById('rosterStaffList');
@@ -1923,7 +2073,7 @@
 
         item.innerHTML = `
           <div>
-            <div class="font-bold text-xs sm:text-sm text-white">${staff.name}</div>
+            <div class="font-bold text-xs sm:text-sm text-white">${staff.name || 'Без имени'}</div>
             <div class="text-[11px] text-slate-400">${ROLE_WEIGHTS[staff.primaryRole]?.label || staff.primaryRole}</div>
           </div>
           <div class="flex items-center gap-1.5">
@@ -1955,7 +2105,7 @@
       const camp = campsList.find(c => c.id === activeRosterCampId);
       if (!camp) return;
 
-      const current = camp.roster || [];
+      const current = Array.isArray(camp.roster) ? camp.roster : [];
       if (!current.includes(staffId)) {
         const updated = [...current, staffId];
         db.collection('camps').doc(activeRosterCampId).update({ roster: updated })
@@ -1974,7 +2124,8 @@
         message: `Убрать ${staff.name} из состава слёта "${camp.name}"? Оценки этого сотрудника за данный слёт также будут аннулированы.`,
         confirmText: "Исключить",
         onConfirm: () => {
-          const updated = (camp.roster || []).filter(id => id !== staffId);
+          const current = Array.isArray(camp.roster) ? camp.roster : [];
+          const updated = current.filter(id => id !== staffId);
           db.collection('camps').doc(campId).update({ roster: updated }).then(() => {
             const evalsToDelete = evaluationsList.filter(e => e.campId === campId && e.staffId === staffId);
             evalsToDelete.forEach(ev => {
@@ -2058,8 +2209,9 @@
               db.collection('evaluations').doc(ev.id).delete();
             });
             campsList.forEach(camp => {
-              if (camp.roster && camp.roster.includes(staffId)) {
-                const updated = camp.roster.filter(id => id !== staffId);
+              const current = Array.isArray(camp.roster) ? camp.roster : [];
+              if (current.includes(staffId)) {
+                const updated = current.filter(id => id !== staffId);
                 db.collection('camps').doc(camp.id).update({ roster: updated });
               }
             });
@@ -2069,7 +2221,7 @@
       });
     }
 
-    /* ================= CRUD CAMPS ================= */
+    /* ================= CRUD CAMPS (СТРОГИЕ ДАТЫ) ================= */
     function openCampModal(campId = null) {
       const modal = document.getElementById('campModal');
       const title = document.getElementById('campModalTitle');
@@ -2082,14 +2234,20 @@
         editInput.value = camp.id;
         document.getElementById('campNameInput').value = camp.name || '';
         document.getElementById('campLocationInput').value = camp.location || '';
-        document.getElementById('campDatesInput').value = camp.dates || '';
+        document.getElementById('campStartDateInput').value = camp.startDate || '';
+        document.getElementById('campEndDateInput').value = camp.endDate || '';
         title.textContent = 'Редактировать слёт';
         submitBtn.textContent = 'Обновить';
       } else {
         editInput.value = '';
         document.getElementById('campNameInput').value = '';
         document.getElementById('campLocationInput').value = '';
-        document.getElementById('campDatesInput').value = '';
+        
+        // По умолчанию ставим сегодняшнюю дату
+        const todayStr = new Date().toISOString().slice(0, 10);
+        document.getElementById('campStartDateInput').value = todayStr;
+        document.getElementById('campEndDateInput').value = todayStr;
+        
         title.textContent = 'Создать новый слёт';
         submitBtn.textContent = 'Создать слёт';
       }
@@ -2104,10 +2262,21 @@
     function handleCampSubmit(e) {
       e.preventDefault();
       const editId = document.getElementById('campEditId').value;
+      const startDate = document.getElementById('campStartDateInput').value;
+      const endDate = document.getElementById('campEndDateInput').value;
+
+      if (startDate && endDate && startDate > endDate) {
+        showToast("Дата начала не может быть позже даты окончания!", "error");
+        return;
+      }
+
       const data = {
         name: document.getElementById('campNameInput').value.trim(),
         location: document.getElementById('campLocationInput').value.trim(),
-        dates: document.getElementById('campDatesInput').value.trim()
+        startDate: startDate,
+        endDate: endDate,
+        startDateTimestamp: startDate ? new Date(startDate).getTime() : Date.now(),
+        endDateTimestamp: endDate ? new Date(endDate).getTime() : Date.now()
       };
 
       if (editId) {
@@ -2157,7 +2326,7 @@
         const m = calculateStaffMultiCampK(s.id);
         const badge = getCategoryBadge(m);
         return {
-          "ФИО": s.name,
+          "ФИО": s.name || "Без имени",
           "Позывной": s.nickname || "",
           "Специализация": ROLE_WEIGHTS[s.primaryRole]?.label || s.primaryRole,
           "Контакты": s.contact || "",
@@ -2180,6 +2349,7 @@
           "Сотрудник": staff ? staff.name : e.staffId,
           "Слёт / Смена": camp ? camp.name : e.campId,
           "Локация": camp ? (camp.location || "") : "",
+          "Даты слёта": formatCampDateRange(camp),
           "Роль на смене": ROLE_WEIGHTS[e.role]?.label || e.role,
           "Оценка за слёт (K)": e.finalScore,
           "D (Дисциплина)": e.vectors?.D || "",
@@ -2195,13 +2365,15 @@
       XLSX.utils.book_append_sheet(wb, wsEvals, "Оценки по слётам");
 
       const campRows = campsList.map(c => {
-        const rosterCount = (c.roster || []).length;
+        const rosterCount = (Array.isArray(c.roster) ? c.roster : []).length;
         const campEvals = getCampEvaluations(c.id);
         const avg = campEvals.length > 0 ? (campEvals.reduce((a, b) => a + b.finalScore, 0) / campEvals.length).toFixed(2) : "—";
         return {
           "Название слёта": c.name,
           "Локация / База": c.location || "",
-          "Даты проведения": c.dates || "",
+          "Даты проведения": formatCampDateRange(c),
+          "Дата начала": c.startDate || "",
+          "Дата окончания": c.endDate || "",
           "Человек в составе": rosterCount,
           "Оценено сотрудников": campEvals.length,
           "Средний K команды": avg
