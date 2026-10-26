@@ -2,14 +2,17 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CampMetrix 360° — Google Sites Edition</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>CampMetrix 360° — Мультислетовый реестр команды</title>
+  
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- SheetJS (XLSX Export) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <!-- Firebase App & Firestore Compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -17,9 +20,8 @@
   <style>
     html, body {
       min-height: 100%;
-      height: auto;
-      overflow-x: hidden;
-      background-color: #0f172a;
+      background-color: #0b1120;
+      -webkit-tap-highlight-color: transparent;
     }
     @media print {
       .no-print { display: none !important; }
@@ -27,179 +29,232 @@
       body { background: white !important; color: black !important; font-size: 11pt; }
     }
     .print-only { display: none; }
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #1e293b; }
-    ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+    /* Стилизация скроллбаров внутри модалок */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: rgba(30, 41, 59, 0.5); }
+    ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    .touch-scroll { -webkit-overflow-scrolling: touch; }
   </style>
 </head>
-<body class="text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
+<body class="text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white pb-10">
+
+  <!-- Floating Toast Notifications Container -->
+  <div id="toastContainer" class="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none max-w-sm w-full px-3"></div>
 
   <!-- Header -->
-  <header class="bg-slate-800/90 backdrop-blur border-b border-slate-700/80 sticky top-0 z-30 px-4 py-3">
-    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-indigo-600 flex items-center justify-center font-black text-white text-lg shadow-md shadow-indigo-950">
+  <header class="bg-slate-900/90 backdrop-blur border-b border-slate-800 sticky top-0 z-30 px-3 sm:px-4 py-3">
+    <div class="max-w-7xl mx-auto flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2.5 sm:gap-3">
+        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-indigo-600 flex items-center justify-center font-black text-white text-base sm:text-lg shadow-md shadow-indigo-950/50 flex-shrink-0">
           CM
         </div>
         <div>
-          <h1 class="text-base sm:text-lg font-bold tracking-tight text-white flex items-center gap-2">
-            CampMetrix 360°
-            <span class="text-[11px] font-normal px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Cloud Firebase</span>
-          </h1>
-          <p class="text-xs text-slate-400">Кадровый реестр, управление составами слётов и оценка эффективности</p>
+          <div class="flex items-center gap-2">
+            <h1 class="text-base sm:text-lg font-bold tracking-tight text-white leading-tight">CampMetrix 360°</h1>
+            <span class="hidden sm:inline-block text-[11px] font-medium px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Cloud</span>
+          </div>
+          <p class="text-[11px] text-slate-400 truncate max-w-[200px] sm:max-w-none">Система оценки и кадровый реестр слётов</p>
         </div>
       </div>
 
-      <!-- Cloud Sync Indicator -->
-      <div id="cloudStatus" class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-slate-700/60 text-slate-300 border border-slate-600 transition-colors">
-        <span id="cloudStatusDot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-        <span id="cloudStatusText">Подключение к базе...</span>
+      <!-- Right Header Actions -->
+      <div class="flex items-center gap-2">
+        <button onclick="openEvaluationModal()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-sm shadow-indigo-950">
+          <i data-lucide="award" class="w-4 h-4"></i>
+          <span class="hidden sm:inline">Оценить</span>
+        </button>
+        <div id="cloudStatus" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-slate-800 text-slate-300 border border-slate-700">
+          <span id="cloudStatusDot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+          <span id="cloudStatusText" class="hidden md:inline">Подключение...</span>
+        </div>
       </div>
     </div>
   </header>
 
   <!-- Navigation Tabs -->
-  <nav class="bg-slate-800/50 border-b border-slate-700/60 px-4 py-2 sticky top-[65px] z-20 backdrop-blur no-print">
-    <div class="max-w-7xl mx-auto flex items-center gap-2 overflow-x-auto text-sm">
-      <button onclick="switchTab('registry')" id="tabBtn-registry" class="tab-btn px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 bg-indigo-600 text-white whitespace-nowrap shadow-sm">
-        <i data-lucide="users" class="w-4 h-4"></i> Реестр команды
-      </button>
-      <button onclick="switchTab('camps')" id="tabBtn-camps" class="tab-btn px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 text-slate-400 hover:bg-slate-800 hover:text-slate-200 whitespace-nowrap">
-        <i data-lucide="tent" class="w-4 h-4"></i> Слёты и составы
-      </button>
-      <button onclick="switchTab('evaluation')" id="tabBtn-evaluation" class="tab-btn px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 text-slate-400 hover:bg-slate-800 hover:text-slate-200 whitespace-nowrap">
-        <i data-lucide="clipboard-check" class="w-4 h-4"></i> Мастер оценки 360°
+  <nav class="bg-slate-900/60 border-b border-slate-800/80 px-3 sm:px-4 py-2 sticky top-[57px] sm:top-[65px] z-20 backdrop-blur no-print">
+    <div class="max-w-7xl mx-auto flex items-center justify-between gap-2 text-xs sm:text-sm">
+      <div class="flex items-center gap-1.5 sm:gap-2">
+        <button onclick="switchTab('registry')" id="tabBtn-registry" class="tab-btn px-3 sm:px-4 py-2 rounded-lg font-semibold transition flex items-center gap-2 bg-indigo-600 text-white shadow-sm">
+          <i data-lucide="users" class="w-4 h-4"></i> Реестр команды
+        </button>
+        <button onclick="switchTab('camps')" id="tabBtn-camps" class="tab-btn px-3 sm:px-4 py-2 rounded-lg font-semibold transition flex items-center gap-2 text-slate-400 hover:bg-slate-800 hover:text-slate-200">
+          <i data-lucide="tent" class="w-4 h-4"></i> Слёты и смены
+        </button>
+      </div>
+      <button onclick="exportXLSX()" class="px-2.5 sm:px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 rounded-lg text-xs font-bold transition flex items-center gap-1.5" title="Выгрузить полный отчёт в Excel">
+        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+        <span>XLSX</span>
       </button>
     </div>
   </nav>
 
-  <!-- Main Container -->
-  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+  <!-- Main Content -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 space-y-4 sm:space-y-6">
 
     <!-- TAB 1: REGISTRY -->
-    <section id="tab-registry" class="space-y-6">
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-        <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 shadow-sm">
-          <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Всего в базе</div>
-          <div class="text-2xl sm:text-3xl font-extrabold text-white mt-1" id="statTotalStaff">0</div>
-          <div class="text-xs text-slate-500 mt-0.5">вожатых и специалистов</div>
+    <section id="tab-registry" class="space-y-4 sm:space-y-6">
+      
+      <!-- Metrics Badges -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+        <div class="bg-slate-800/70 border border-slate-700/60 rounded-xl p-3 sm:p-4">
+          <div class="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Всего в базе</div>
+          <div class="text-xl sm:text-3xl font-black text-white mt-0.5" id="statTotalStaff">0</div>
+          <div class="text-[11px] text-slate-500">сотрудников лагеря</div>
         </div>
-        <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 shadow-sm">
-          <div class="text-[11px] font-semibold text-amber-400 uppercase tracking-wider">Золотой фонд (K ≥ 4.3)</div>
-          <div class="text-2xl sm:text-3xl font-extrabold text-amber-300 mt-1" id="statCoreStaff">0</div>
-          <div class="text-xs text-slate-500 mt-0.5">рекомендованы в ядро</div>
+        <div class="bg-slate-800/70 border border-slate-700/60 rounded-xl p-3 sm:p-4">
+          <div class="text-[10px] sm:text-[11px] font-semibold text-amber-400 uppercase tracking-wider">Золотой фонд (≥ 4.3)</div>
+          <div class="text-xl sm:text-3xl font-black text-amber-300 mt-0.5" id="statCoreStaff">0</div>
+          <div class="text-[11px] text-slate-500">ядро и наставники</div>
         </div>
-        <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 shadow-sm">
-          <div class="text-[11px] font-semibold text-indigo-400 uppercase tracking-wider">Слётов в системе</div>
-          <div class="text-2xl sm:text-3xl font-extrabold text-indigo-300 mt-1" id="statTotalCamps">0</div>
-          <div class="text-xs text-slate-500 mt-0.5">зафиксировано смен</div>
+        <div class="bg-slate-800/70 border border-slate-700/60 rounded-xl p-3 sm:p-4">
+          <div class="text-[10px] sm:text-[11px] font-semibold text-indigo-400 uppercase tracking-wider">Слётов в базе</div>
+          <div class="text-xl sm:text-3xl font-black text-indigo-300 mt-0.5" id="statTotalCamps">0</div>
+          <div class="text-[11px] text-slate-500">проведено смен</div>
         </div>
-        <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 shadow-sm">
-          <div class="text-[11px] font-semibold text-rose-400 uppercase tracking-wider">Стоп-лист</div>
-          <div class="text-2xl sm:text-3xl font-extrabold text-rose-400 mt-1" id="statStopList">0</div>
-          <div class="text-xs text-slate-500 mt-0.5">критические нарушения</div>
+        <div class="bg-slate-800/70 border border-slate-700/60 rounded-xl p-3 sm:p-4">
+          <div class="text-[10px] sm:text-[11px] font-semibold text-rose-400 uppercase tracking-wider">Стоп-лист</div>
+          <div class="text-xl sm:text-3xl font-black text-rose-400 mt-0.5" id="statStopList">0</div>
+          <div class="text-[11px] text-slate-500">нарушения ТБ и правил</div>
         </div>
       </div>
 
-      <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-3 sm:p-4 flex flex-wrap gap-3 items-center justify-between shadow-sm">
-        <div class="flex flex-wrap items-center gap-3 flex-1 min-w-[260px]">
-          <div class="relative flex-1 min-w-[200px] max-w-md">
-            <i data-lucide="search" class="w-4 h-4 absolute left-3 top-3 text-slate-400"></i>
-            <input type="text" id="searchInput" oninput="renderStaffRegistry()" placeholder="Поиск по ФИО, позывному..." class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+      <!-- Controls & Search -->
+      <div class="bg-slate-800/70 border border-slate-700/60 rounded-xl p-3 sm:p-4 space-y-3">
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+          <div class="relative flex-1">
+            <i data-lucide="search" class="w-4 h-4 absolute left-3 top-2.5 text-slate-400"></i>
+            <input type="text" id="searchInput" oninput="renderStaffRegistry()" placeholder="Поиск по имени, позывному..." class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500">
           </div>
-          <select id="roleFilter" onchange="renderStaffRegistry()" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
-            <option value="all">Все профили</option>
-            <option value="pedagogical">Педагогический профиль</option>
-            <option value="technical">Технический профиль</option>
-            <option value="mixed">Универсалы (Пед + Тех)</option>
-          </select>
-        </div>
-        <div class="flex items-center gap-2">
-          <button onclick="openStaffModal()" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-semibold transition flex items-center gap-1.5 shadow-sm">
+          <button onclick="openStaffModal()" class="w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-1.5 shadow-sm">
             <i data-lucide="user-plus" class="w-4 h-4"></i> Добавить человека
           </button>
-          <button onclick="exportCSV()" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-sm font-medium transition flex items-center gap-1.5" title="Скачать CSV">
-            <i data-lucide="download" class="w-4 h-4"></i> Экспорт
-          </button>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-700/60 text-xs">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-slate-400 text-[11px]">Фильтр:</span>
+            <select id="roleFilter" onchange="renderStaffRegistry()" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+              <option value="all">Все профили</option>
+              <option value="pedagogical">Вожатые и стажёры</option>
+              <option value="organizer">Организаторы мероприятий</option>
+              <option value="technical">Технический персонал / Медиа</option>
+              <option value="stop">Только стоп-лист</option>
+            </select>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <span class="text-slate-400 text-[11px]">Сортировка:</span>
+            <select id="sortSelect" onchange="renderStaffRegistry()" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+              <option value="k_desc">По рейтингу K (высшие)</option>
+              <option value="k_asc">По рейтингу K (низшие)</option>
+              <option value="name_asc">По имени (А → Я)</option>
+              <option value="camps_desc">По числу слётов</option>
+              <option value="ped_desc">По Педагогическому K</option>
+              <option value="org_desc">По Организаторскому K</option>
+              <option value="tech_desc">По Техническому K</option>
+            </select>
+          </div>
         </div>
       </div>
 
-      <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl overflow-hidden shadow-sm">
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-sm whitespace-nowrap">
-            <thead class="bg-slate-900/80 text-slate-400 border-b border-slate-700/60 uppercase text-[11px] font-semibold tracking-wider">
-              <tr>
-                <th class="py-3 px-4">Сотрудник</th>
-                <th class="py-3 px-4">Слётов</th>
-                <th class="py-3 px-4">Пед. K</th>
-                <th class="py-3 px-4">Тех. K</th>
-                <th class="py-3 px-4">Итоговый K</th>
-                <th class="py-3 px-4">Тренд</th>
-                <th class="py-3 px-4">Категория</th>
-                <th class="py-3 px-4 text-right">Действия</th>
-              </tr>
-            </thead>
-            <tbody id="staffTableBody" class="divide-y divide-slate-700/40"></tbody>
-          </table>
-        </div>
-        <div id="emptyStaffNotice" class="hidden p-8 text-center text-slate-400 text-sm">
-          Сотрудники не найдены. Добавьте первого человека через кнопку «Добавить человека».
-        </div>
+      <!-- Staff List: Responsive Cards for Mobile, Clean Table for Desktop -->
+      <!-- 1. MOBILE CARDS (block md:hidden) -->
+      <div id="staffCardsContainer" class="block md:hidden space-y-3">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- 2. DESKTOP TABLE (hidden md:block) -->
+      <div class="hidden md:block bg-slate-800/70 border border-slate-700/60 rounded-xl overflow-hidden shadow-sm">
+        <table class="w-full text-left text-sm whitespace-nowrap">
+          <thead class="bg-slate-900/80 text-slate-400 border-b border-slate-700/60 uppercase text-[11px] font-semibold tracking-wider">
+            <tr>
+              <th class="py-3 px-4 cursor-pointer hover:text-white" onclick="setSort('name_asc')">Сотрудник ⇕</th>
+              <th class="py-3 px-3 cursor-pointer hover:text-white text-center" onclick="setSort('camps_desc')">Слётов ⇕</th>
+              <th class="py-3 px-3 cursor-pointer hover:text-white text-center" onclick="setSort('ped_desc')">Пед. K ⇕</th>
+              <th class="py-3 px-3 cursor-pointer hover:text-white text-center" onclick="setSort('org_desc')">Орг. K ⇕</th>
+              <th class="py-3 px-3 cursor-pointer hover:text-white text-center" onclick="setSort('tech_desc')">Тех. K ⇕</th>
+              <th class="py-3 px-3 cursor-pointer hover:text-white text-center" onclick="setSort('k_desc')">Общий K ⇕</th>
+              <th class="py-3 px-3 text-center">Тренд</th>
+              <th class="py-3 px-3 text-center">Категория</th>
+              <th class="py-3 px-4 text-right">Действия</th>
+            </tr>
+          </thead>
+          <tbody id="staffTableBody" class="divide-y divide-slate-700/40"></tbody>
+        </table>
+      </div>
+
+      <div id="emptyStaffNotice" class="hidden p-8 text-center text-slate-400 text-sm bg-slate-800/30 rounded-xl border border-slate-800">
+        Сотрудники не найдены. Добавьте первого человека через кнопку «Добавить человека».
       </div>
     </section>
 
-    <!-- TAB 2: CAMPS & ROSTERS -->
-    <section id="tab-camps" class="hidden space-y-6">
-      <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 sm:p-6 max-w-5xl mx-auto space-y-6 shadow-sm">
-        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700 pb-4">
+    <!-- TAB 2: CAMPS -->
+    <section id="tab-camps" class="hidden space-y-4 sm:space-y-6">
+      <div class="bg-slate-800/70 border border-slate-700/60 rounded-xl p-4 sm:p-6 space-y-4 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-700/60 pb-3">
           <div>
-            <h2 class="text-xl font-bold text-white flex items-center gap-2">
-              <i data-lucide="tent" class="text-indigo-400 w-6 h-6"></i> Слёты и выездные смены
+            <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+              <i data-lucide="tent" class="text-indigo-400 w-5 h-5"></i> Слёты и смены
             </h2>
-            <p class="text-xs sm:text-sm text-slate-400 mt-1">Формируйте состав участников для каждой смены, редактируйте даты и удаляйте завершенные проекты.</p>
+            <p class="text-xs text-slate-400 mt-0.5">Управление составом команд, датами выездов и анализ эффективности смен.</p>
           </div>
-          <button onclick="openCampModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-semibold transition flex items-center gap-2 shadow-sm">
+          <button onclick="openCampModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-1.5 shadow-sm">
             <i data-lucide="plus" class="w-4 h-4"></i> Создать новый слёт
           </button>
         </div>
-        <div id="campsList" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-        <div id="emptyCampsNotice" class="hidden p-8 text-center text-slate-400 text-sm">
+        <div id="campsList" class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4"></div>
+        <div id="emptyCampsNotice" class="hidden p-8 text-center text-slate-400 text-sm bg-slate-900/40 rounded-xl border border-slate-800">
           Слёты пока не созданы. Нажмите «Создать новый слёт», чтобы начать формировать смену.
         </div>
       </div>
     </section>
 
-    <!-- TAB 3: EVALUATION WIZARD -->
-    <section id="tab-evaluation" class="hidden space-y-6">
-      <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 sm:p-6 max-w-4xl mx-auto space-y-6 shadow-sm">
-        <div class="border-b border-slate-700 pb-4">
-          <h2 class="text-xl font-bold text-white flex items-center gap-2">
-            <i data-lucide="award" class="text-indigo-400 w-6 h-6"></i>
-            Оценка сотрудника за слёт
-          </h2>
-          <p class="text-xs sm:text-sm text-slate-400 mt-1">Оценка фиксируется за конкретный слёт и сохраняется прямо в облачную базу Firestore.</p>
-        </div>
+  </main>
 
-        <form id="evalForm" onsubmit="saveEvaluation(event)" class="space-y-6">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- MODAL 1: EVALUATION WIZARD (Автосброс при каждом открытии!) -->
+  <div id="evalModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 hidden">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-3xl w-full flex flex-col max-h-[94vh] shadow-2xl overflow-hidden">
+      <!-- Fixed Sticky Header -->
+      <div class="flex justify-between items-center px-4 sm:px-6 py-3.5 border-b border-slate-700 bg-slate-800 flex-shrink-0 z-10">
+        <div>
+          <h3 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+            <i data-lucide="award" class="text-indigo-400 w-5 h-5"></i> Оценка за слёт
+          </h3>
+          <p class="text-[11px] text-slate-400">Форма сброшена до эталонных значений</p>
+        </div>
+        <button onclick="closeEvaluationModal()" class="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Scrollable Form Body -->
+      <div class="overflow-y-auto touch-scroll p-4 sm:p-6 space-y-5 flex-1">
+        <form id="evalWizardForm" onsubmit="saveEvaluation(event)" class="space-y-5">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label class="block text-xs font-medium text-slate-300 mb-1">Слёт / Смена *</label>
-              <select id="evalCampSelect" required onchange="onEvalCampChanged()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"></select>
+              <label class="block text-[11px] font-semibold text-slate-300 uppercase mb-1">Слёт / Смена *</label>
+              <select id="evalCampSelect" required onchange="onEvalCampSelectChanged()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-slate-100 focus:outline-none focus:border-indigo-500"></select>
             </div>
             <div>
-              <label class="block text-xs font-medium text-slate-300 mb-1">Сотрудник *</label>
-              <select id="evalStaffSelect" required onchange="calculateWizardScore()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"></select>
+              <label class="block text-[11px] font-semibold text-slate-300 uppercase mb-1">Сотрудник *</label>
+              <select id="evalStaffSelect" required onchange="calculateWizardScore()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-slate-100 focus:outline-none focus:border-indigo-500"></select>
             </div>
             <div>
-              <label class="block text-xs font-medium text-slate-300 mb-1">Роль на слёте *</label>
-              <select id="evalRoleSelect" required onchange="calculateWizardScore()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:outline-none focus:border-indigo-500">
-                <optgroup label="Педагогические роли">
+              <label class="block text-[11px] font-semibold text-slate-300 uppercase mb-1">Роль на слёте *</label>
+              <select id="evalRoleSelect" required onchange="calculateWizardScore()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-slate-100 focus:outline-none focus:border-indigo-500">
+                <optgroup label="Педагогическое направление">
                   <option value="trainee">Стажёр (Trainee)</option>
                   <option value="counselor" selected>Линейный вожатый</option>
-                  <option value="lead">Старший вожатый / Координатор</option>
+                  <option value="lead">Старший вожатый / Наставник</option>
                 </optgroup>
-                <optgroup label="Технические роли">
+                <optgroup label="Организационное направление">
+                  <option value="organizer">Организатор мероприятий (Event)</option>
+                </optgroup>
+                <optgroup label="Техническое направление">
                   <option value="sound">Звукорежиссёр / Свет / DJ</option>
                   <option value="media">Медиа-центр (Фото / Видео / SMM)</option>
                   <option value="admin">Комендант / Логист / Техперсонал</option>
@@ -208,160 +263,348 @@
             </div>
           </div>
 
-          <div class="flex items-center justify-between p-3.5 rounded-xl bg-indigo-950/40 border border-indigo-500/30">
-            <div class="flex items-center gap-3">
-              <i data-lucide="layers" class="text-indigo-400 w-5 h-5"></i>
+          <!-- Mode 360 toggle -->
+          <div class="flex items-center justify-between p-3 rounded-xl bg-indigo-950/40 border border-indigo-500/30">
+            <div class="flex items-center gap-2.5">
+              <i data-lucide="layers" class="text-indigo-400 w-5 h-5 flex-shrink-0"></i>
               <div>
-                <div class="text-sm font-bold text-white">Режим 360° (Куратор 45% + Напарник 30% + Дети 25%)</div>
-                <div class="text-xs text-slate-400">Взвешивание оценок трех сторон для объективности</div>
+                <div class="text-xs sm:text-sm font-bold text-white">Режим 360° (Куратор 45% + Напарник 30% + Дети 25%)</div>
+                <div class="text-[11px] text-slate-400">Усреднение оценок для защиты от предвзятости</div>
               </div>
             </div>
-            <label class="relative inline-flex items-center cursor-pointer">
+            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
               <input type="checkbox" id="eval360Mode" onchange="calculateWizardScore()" class="sr-only peer">
-              <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+              <div class="w-10 h-5 bg-slate-700 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
             </label>
           </div>
 
-          <div class="space-y-4 bg-slate-900/60 p-4 rounded-xl border border-slate-700/60">
+          <!-- 6 Vector Sliders -->
+          <div class="space-y-3.5 bg-slate-900/60 p-4 rounded-xl border border-slate-700/60">
             <div class="flex justify-between items-center border-b border-slate-700/60 pb-2">
-              <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Векторы компетенций (от 1.0 до 5.0)</h3>
-              <span class="text-xs text-indigo-400 font-medium" id="roleFormulaLabel">Веса роли: Линейный вожатый</span>
+              <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider">6 векторов компетенций (1.0 — 5.0)</h4>
+              <span class="text-xs text-indigo-400 font-semibold" id="roleFormulaLabel">Вожатый</span>
             </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
               <div class="space-y-1">
                 <div class="flex justify-between text-xs">
                   <span class="text-slate-300 font-medium">1. Дисциплина и регламент (D)</span>
-                  <span id="val_D" class="font-bold text-indigo-400 text-sm">4.5</span>
+                  <span id="val_D" class="font-bold text-indigo-400 text-sm">4.0</span>
                 </div>
-                <input type="range" id="slider_D" min="1" max="5" step="0.1" value="4.5" oninput="calculateWizardScore()" class="w-full accent-indigo-500 cursor-pointer">
-                <div class="text-[11px] text-slate-500">Тайминг слёта, планёрки, отбой, инвентарь</div>
+                <input type="range" id="slider_D" min="1" max="5" step="0.1" value="4.0" oninput="calculateWizardScore()" class="w-full accent-indigo-500 cursor-pointer">
+                <div class="text-[10px] text-slate-500">Тайминг слёта, планёрки, отбой, инвентарь</div>
               </div>
               <div class="space-y-1">
                 <div class="flex justify-between text-xs">
-                  <span class="text-slate-300 font-medium">2. Работа с коллективом (A)</span>
-                  <span id="val_A" class="font-bold text-indigo-400 text-sm">4.5</span>
+                  <span class="text-slate-300 font-medium">2. Работа с аудиторией (A)</span>
+                  <span id="val_A" class="font-bold text-indigo-400 text-sm">4.0</span>
                 </div>
-                <input type="range" id="slider_A" min="1" max="5" step="0.1" value="4.5" oninput="calculateWizardScore()" class="w-full accent-indigo-500 cursor-pointer">
-                <div class="text-[11px] text-slate-500">Включение тихих ребят, динамика группы, климат без буллинга</div>
+                <input type="range" id="slider_A" min="1" max="5" step="0.1" value="4.0" oninput="calculateWizardScore()" class="w-full accent-indigo-500 cursor-pointer">
+                <div class="text-[10px] text-slate-500">Удержание зала/отряда, вовлечение тихих, микроклимат</div>
               </div>
               <div class="space-y-1">
                 <div class="flex justify-between text-xs">
                   <span class="text-slate-300 font-medium">3. Безопасность и ТБ (S)</span>
-                  <span id="val_S" class="font-bold text-indigo-400 text-sm">4.8</span>
+                  <span id="val_S" class="font-bold text-indigo-400 text-sm">4.5</span>
                 </div>
-                <input type="range" id="slider_S" min="1" max="5" step="0.1" value="4.8" oninput="calculateWizardScore()" class="w-full accent-indigo-500 cursor-pointer">
-                <div class="text-[11px] text-slate-500">Питьевой режим, головные уборы, медпункт, контроль рисков</div>
+                <input type="range" id="slider_S" min="1" max="5" step="0.1" value="4.5" oninput="calculateWizardScore()" class="w-full accent-indigo-500 cursor-pointer">
+                <div class="text-[10px] text-slate-500">Питьевой режим, контроль рисков, бдительность на локациях</div>
               </div>
               <div class="space-y-1">
                 <div class="flex justify-between text-xs">
-                  <span class="text-slate-300 font-medium">4. Командность и партнерство (T)</span>
-                  <span id="val_T" class="font-bold text-indigo-400 text-sm">4.2</span>
+                  <span class="text-slate-300 font-medium">4. Командность и выручка (T)</span>
+                  <span id="val_T" class="font-bold text-indigo-400 text-sm">4.0</span>
                 </div>
-                <input type="range" id="slider_T" min="1" max="5" step="0.1" value="4.2" oninput="calculateWizardScore()" class="w-full accent-indigo-500 cursor-pointer">
-                <div class="text-[11px] text-slate-500">Подстраховка напарника, помощь штабу, здоровая атмосфера</div>
+                <input type="range" id="slider_T" min="1" max="5" step="0.1" value="4.0" oninput="calculateWizardScore()" class="w-full accent-indigo-500 cursor-pointer">
+                <div class="text-[10px] text-slate-500">Подстраховка напарника, помощь штабу, отсутствие токсичности</div>
               </div>
               <div class="space-y-1">
                 <div class="flex justify-between text-xs">
-                  <span class="text-slate-300 font-medium">5. Стрессоустойчивость и форс-мажор (F)</span>
+                  <span class="text-slate-300 font-medium">5. Стресс и форс-мажор (F)</span>
                   <span id="val_F" class="font-bold text-indigo-400 text-sm">4.0</span>
                 </div>
                 <input type="range" id="slider_F" min="1" max="5" step="0.1" value="4.0" oninput="calculateWizardScore()" class="w-full accent-indigo-500 cursor-pointer">
-                <div class="text-[11px] text-slate-500">Реакция на непогоду, сдвиг программы, хладнокровие</div>
+                <div class="text-[10px] text-slate-500">Хладнокровие при ЧП, срыв тайминга, дождь, сдвиги программы</div>
               </div>
               <div class="space-y-1">
                 <div class="flex justify-between text-xs">
                   <span class="text-slate-300 font-medium">6. Обучаемость и дебрифинг (L)</span>
-                  <span id="val_L" class="font-bold text-indigo-400 text-sm">4.5</span>
+                  <span id="val_L" class="font-bold text-indigo-400 text-sm">4.0</span>
                 </div>
-                <input type="range" id="slider_L" min="1" max="5" step="0.1" value="4.5" oninput="calculateWizardScore()" class="w-full accent-indigo-500 cursor-pointer">
-                <div class="text-[11px] text-slate-500">Принятие критики куратора, скорость исправления ошибок</div>
+                <input type="range" id="slider_L" min="1" max="5" step="0.1" value="4.0" oninput="calculateWizardScore()" class="w-full accent-indigo-500 cursor-pointer">
+                <div class="text-[10px] text-slate-500">Принятие критики куратора, не повторяет ошибок вчерашнего дня</div>
               </div>
             </div>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="p-3.5 rounded-xl bg-slate-900/60 border border-slate-700/60 space-y-2">
-              <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider">Бонусы за условия смены</span>
+          <!-- Modifiers and Penalties -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-700/60 space-y-1.5">
+              <span class="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">Бонусы условий смены</span>
               <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
-                <input type="checkbox" id="modSolo" onchange="calculateWizardScore()" class="rounded bg-slate-800 border-slate-700 text-indigo-600 focus:ring-0">
-                Один на отряде без напарника (+0.30 к K)
+                <input type="checkbox" id="modSolo" onchange="calculateWizardScore()" class="rounded bg-slate-800 border-slate-700 text-indigo-600">
+                Один на отряде / один на направлении (+0.30)
               </label>
               <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
-                <input type="checkbox" id="modHardAge" onchange="calculateWizardScore()" class="rounded bg-slate-800 border-slate-700 text-indigo-600 focus:ring-0">
-                Сложный контингент / трудные подростки (+0.20 к K)
+                <input type="checkbox" id="modHardAge" onchange="calculateWizardScore()" class="rounded bg-slate-800 border-slate-700 text-indigo-600">
+                Сложный контингент / трудные подростки (+0.20)
               </label>
               <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
-                <input type="checkbox" id="modSaveCamp" onchange="calculateWizardScore()" class="rounded bg-slate-800 border-slate-700 text-indigo-600 focus:ring-0">
-                Спасение вечерней программы / инициатива (+0.20 к K)
+                <input type="checkbox" id="modSaveCamp" onchange="calculateWizardScore()" class="rounded bg-slate-800 border-slate-700 text-indigo-600">
+                Спасение вечернего дела / ключевая инициатива (+0.20)
               </label>
             </div>
 
-            <div class="p-3.5 rounded-xl bg-slate-900/60 border border-slate-700/60 space-y-2">
-              <span class="text-xs font-bold text-rose-400 uppercase tracking-wider">Штрафы и критические фильтры</span>
+            <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-700/60 space-y-1.5">
+              <span class="text-[11px] font-bold text-rose-400 uppercase tracking-wider">Штрафы и фильтр безопасности</span>
               <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
-                <input type="checkbox" id="penLate" onchange="calculateWizardScore()" class="rounded bg-slate-800 border-slate-700 text-rose-600 focus:ring-0">
-                Систематические опоздания на планерки (-0.30 к K)
+                <input type="checkbox" id="penLate" onchange="calculateWizardScore()" class="rounded bg-slate-800 border-slate-700 text-rose-600">
+                Опоздания на планёрки / летучки (-0.30)
               </label>
               <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
-                <input type="checkbox" id="penDisrupt" onchange="calculateWizardScore()" class="rounded bg-slate-800 border-slate-700 text-rose-600 focus:ring-0">
-                Сорванный отбой / шум после тишины (-0.40 к K)
+                <input type="checkbox" id="penDisrupt" onchange="calculateWizardScore()" class="rounded bg-slate-800 border-slate-700 text-rose-600">
+                Сорванный отбой / шум после тишины (-0.40)
               </label>
-              <label class="flex items-center gap-2 text-xs text-rose-300 font-bold bg-rose-950/50 p-2 rounded-lg border border-rose-800/80 cursor-pointer">
-                <input type="checkbox" id="stopFactor" onchange="calculateWizardScore()" class="rounded bg-slate-800 border-rose-500 text-rose-600 focus:ring-0">
+              <label class="flex items-center gap-2 text-xs text-rose-300 font-bold bg-rose-950/60 p-1.5 rounded-lg border border-rose-800/80 cursor-pointer">
+                <input type="checkbox" id="stopFactor" onchange="calculateWizardScore()" class="rounded bg-slate-800 border-rose-500 text-rose-600">
                 СТОП-ФАКТОР (Алкоголь, грубое ТБ, насилие) → K = 0
               </label>
             </div>
           </div>
 
-          <div class="p-4 rounded-xl bg-gradient-to-r from-slate-900 to-indigo-950 border border-indigo-800/40 flex flex-wrap items-center justify-between gap-4">
+          <!-- Wizard Result Bar -->
+          <div class="p-3.5 rounded-xl bg-gradient-to-r from-slate-900 to-indigo-950 border border-indigo-800/40 flex items-center justify-between gap-3">
             <div>
-              <div class="text-xs text-slate-400 uppercase font-medium">Расчётный коэффициент за слёт:</div>
-              <div class="text-3xl font-black text-white flex items-baseline gap-2 mt-0.5">
-                <span id="wizardKResult">4.45</span>
-                <span id="wizardKBadge" class="text-xs px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/30">Золотой фонд</span>
+              <div class="text-[10px] text-slate-400 uppercase font-semibold">Итог за этот слёт:</div>
+              <div class="text-2xl sm:text-3xl font-black text-white flex items-baseline gap-2">
+                <span id="wizardKResult">4.08</span>
+                <span id="wizardKBadge" class="text-xs px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-semibold border border-indigo-500/30">Основа команды</span>
               </div>
             </div>
-            <button type="submit" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold shadow-lg shadow-emerald-950/40 transition flex items-center gap-2">
-              <i data-lucide="check-circle" class="w-5 h-5"></i> Сохранить в облако
+            <button type="submit" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold shadow-lg shadow-emerald-950/50 transition flex items-center gap-2 text-xs sm:text-sm">
+              <i data-lucide="check-circle" class="w-4 h-4"></i> Сохранить
             </button>
           </div>
         </form>
       </div>
-    </section>
+    </div>
+  </div>
 
-  </main>
+  <!-- MODAL 2: MEMBER DOSSIER (Исправлен скролл и закрытие!) -->
+  <div id="dossierModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 hidden">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-3xl w-full flex flex-col max-h-[94vh] shadow-2xl overflow-hidden">
+      <!-- Fixed Sticky Header: Never scrolls away! -->
+      <div class="flex justify-between items-center px-4 sm:px-6 py-3.5 border-b border-slate-700 bg-slate-800 flex-shrink-0 z-10">
+        <div>
+          <h3 class="text-base sm:text-xl font-bold text-white flex items-center gap-2" id="dosName">Досье сотрудника</h3>
+          <p class="text-xs text-slate-400" id="dosMeta">История смен и динамика компетенций</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="window.print()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 no-print">
+            <i data-lucide="printer" class="w-4 h-4"></i> <span class="hidden sm:inline">Печать</span>
+          </button>
+          <button onclick="closeDossierModal()" class="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white transition no-print">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
 
-  <!-- MODAL: ADD / EDIT STAFF -->
-  <div id="staffModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl">
+      <!-- Scrollable Content with touch-scroll -->
+      <div class="overflow-y-auto touch-scroll p-4 sm:p-6 space-y-5 flex-1">
+        <!-- 4 Specialized K Indicators -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+          <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-700/60 text-center">
+            <div class="text-[10px] text-slate-400 uppercase font-semibold">Педагогический K</div>
+            <div class="text-xl sm:text-2xl font-black text-indigo-400 mt-0.5" id="dosPedK">—</div>
+            <div class="text-[10px] text-slate-500">Вожатый / Стажёр</div>
+          </div>
+          <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-700/60 text-center">
+            <div class="text-[10px] text-purple-400 uppercase font-semibold">Организаторский K</div>
+            <div class="text-xl sm:text-2xl font-black text-purple-400 mt-0.5" id="dosOrgK">—</div>
+            <div class="text-[10px] text-slate-500">Мероприятия / Сетка</div>
+          </div>
+          <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-700/60 text-center">
+            <div class="text-[10px] text-amber-400 uppercase font-semibold">Технический K</div>
+            <div class="text-xl sm:text-2xl font-black text-amber-400 mt-0.5" id="dosTechK">—</div>
+            <div class="text-[10px] text-slate-500">Звук / Медиа / База</div>
+          </div>
+          <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-700/60 text-center">
+            <div class="text-[10px] text-slate-300 uppercase font-semibold">Общий K-Индекс</div>
+            <div class="text-xl sm:text-2xl font-black text-white mt-0.5" id="dosTotalK">—</div>
+            <div class="text-[10px] font-bold" id="dosCategoryBadge">Категория</div>
+          </div>
+        </div>
+
+        <!-- Radar Chart -->
+        <div class="bg-slate-900/50 border border-slate-700/60 p-4 rounded-xl">
+          <div class="text-xs font-bold text-slate-300 uppercase mb-2">Профиль 6 векторов (Среднее по всем слётам)</div>
+          <div class="h-60 sm:h-64 flex items-center justify-center">
+            <canvas id="radarChart"></canvas>
+          </div>
+        </div>
+
+        <!-- History of camps -->
+        <div class="space-y-2">
+          <div class="text-xs font-bold text-slate-300 uppercase">История участий и оценок по слётам</div>
+          <div id="dosCampsHistory" class="space-y-2"></div>
+        </div>
+
+        <!-- Debrief recommendations -->
+        <div class="p-3.5 rounded-xl bg-slate-900/80 border border-slate-700 space-y-1">
+          <div class="text-xs font-bold text-indigo-300 uppercase flex items-center gap-1.5">
+            <i data-lucide="message-square" class="w-4 h-4"></i> Готовый скрипт для дебрифинга 1-на-1
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed" id="dosDebriefScript"></p>
+        </div>
+
+        <!-- Print-only signature block -->
+        <div class="print-only pt-8 grid grid-cols-2 gap-8 text-xs text-black">
+          <div>Куратор слёта: ___________________ / _________________ /</div>
+          <div>Руководитель смены: _______________ / _________________ /</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: CAMP DOSSIER (NEW: Полное досье на слёт) -->
+  <div id="campDossierModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 hidden">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-3xl w-full flex flex-col max-h-[94vh] shadow-2xl overflow-hidden">
+      <!-- Fixed Sticky Header -->
+      <div class="flex justify-between items-center px-4 sm:px-6 py-3.5 border-b border-slate-700 bg-slate-800 flex-shrink-0 z-10">
+        <div>
+          <h3 class="text-base sm:text-xl font-bold text-white flex items-center gap-2" id="campDosTitle">
+            <i data-lucide="tent" class="text-indigo-400 w-5 h-5"></i> Досье слёта
+          </h3>
+          <p class="text-xs text-slate-400" id="campDosMeta">Аналитика смены и командная статистика</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="window.print()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 no-print">
+            <i data-lucide="printer" class="w-4 h-4"></i> <span class="hidden sm:inline">Печать</span>
+          </button>
+          <button onclick="closeCampDossierModal()" class="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white transition no-print">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Scrollable Body -->
+      <div class="overflow-y-auto touch-scroll p-4 sm:p-6 space-y-5 flex-1">
+        <!-- Camp Overview Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-700/60 text-center">
+            <div class="text-[10px] text-slate-400 uppercase font-semibold">Средний K слёта</div>
+            <div class="text-2xl font-black text-indigo-400 mt-0.5" id="campDosAvgK">—</div>
+            <div class="text-[10px] text-slate-500">командный показатель</div>
+          </div>
+          <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-700/60 text-center">
+            <div class="text-[10px] text-slate-400 uppercase font-semibold">В составе</div>
+            <div class="text-2xl font-black text-white mt-0.5" id="campDosRosterCount">0</div>
+            <div class="text-[10px] text-slate-500">человек на смене</div>
+          </div>
+          <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-700/60 text-center">
+            <div class="text-[10px] text-emerald-400 uppercase font-semibold">Оценено</div>
+            <div class="text-2xl font-black text-emerald-400 mt-0.5" id="campDosEvaluatedPercent">0%</div>
+            <div class="text-[10px] text-slate-500" id="campDosEvaluatedCount">0 из 0</div>
+          </div>
+          <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-700/60 text-center">
+            <div class="text-[10px] text-amber-400 uppercase font-semibold">Золотой фонд</div>
+            <div class="text-2xl font-black text-amber-300 mt-0.5" id="campDosGoldCount">0</div>
+            <div class="text-[10px] text-slate-500">лучшие вожатые смены</div>
+          </div>
+        </div>
+
+        <!-- Team Competency Radar -->
+        <div class="bg-slate-900/50 border border-slate-700/60 p-4 rounded-xl">
+          <div class="text-xs font-bold text-slate-300 uppercase mb-2">Командный профиль слёта (Где преуспели и где просели)</div>
+          <div class="h-60 sm:h-64 flex items-center justify-center">
+            <canvas id="campRadarChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Participants Evaluation Breakdown -->
+        <div class="space-y-2">
+          <div class="flex justify-between items-center text-xs font-bold text-slate-300 uppercase">
+            <span>Оценки сотрудников на этом слёте</span>
+            <span id="campDosParticipantsBadge" class="text-indigo-400"></span>
+          </div>
+          <div id="campDosParticipantsList" class="space-y-2"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 4: CAMP ROSTER (Управление составом людей) -->
+  <div id="rosterModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 hidden">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-2xl w-full flex flex-col max-h-[92vh] shadow-2xl overflow-hidden">
+      <!-- Fixed Header -->
+      <div class="flex justify-between items-center px-4 sm:px-6 py-3.5 border-b border-slate-700 bg-slate-800 flex-shrink-0 z-10">
+        <div>
+          <h3 class="text-base sm:text-lg font-bold text-white flex items-center gap-2" id="rosterCampTitle">
+            <i data-lucide="users" class="text-indigo-400 w-5 h-5"></i> Состав команды слёта
+          </h3>
+          <p class="text-xs text-slate-400 mt-0.5" id="rosterCampMeta">Локация и даты</p>
+        </div>
+        <button onclick="closeRosterModal()" class="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="overflow-y-auto touch-scroll p-4 sm:p-6 space-y-4 flex-1">
+        <!-- Add select -->
+        <div class="bg-slate-900/70 p-3.5 rounded-xl border border-slate-700/70 space-y-2">
+          <label class="block text-xs font-semibold text-slate-300">Добавить человека в состав слёта:</label>
+          <div class="flex flex-col sm:flex-row gap-2">
+            <select id="rosterAddStaffSelect" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs sm:text-sm text-slate-100 focus:outline-none focus:border-indigo-500"></select>
+            <button onclick="addSelectedStaffToRoster()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm">
+              <i data-lucide="user-plus" class="w-4 h-4"></i> Включить в состав
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <div class="flex justify-between items-center text-xs font-bold text-slate-400 uppercase tracking-wider">
+            <span>Люди в составе этого слёта</span>
+            <span id="rosterCountBadge" class="text-indigo-400">0 человек</span>
+          </div>
+          <div id="rosterStaffList" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 5: ADD / EDIT STAFF -->
+  <div id="staffModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 hidden">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-xl">
       <div class="flex justify-between items-center border-b border-slate-700 pb-3">
-        <h3 class="text-lg font-bold text-white" id="staffModalTitle">Добавить сотрудника</h3>
+        <h3 class="text-base sm:text-lg font-bold text-white" id="staffModalTitle">Добавить сотрудника</h3>
         <button onclick="closeStaffModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
-      <form onsubmit="handleStaffSubmit(event)" class="space-y-4">
+      <form onsubmit="handleStaffSubmit(event)" class="space-y-3.5">
         <input type="hidden" id="staffEditId" value="">
         <div>
           <label class="block text-xs font-medium text-slate-300 mb-1">ФИО *</label>
-          <input type="text" id="staffNameInput" required placeholder="Иванов Алексей" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
+          <input type="text" id="staffNameInput" required placeholder="Иванов Алексей" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500">
         </div>
         <div>
           <label class="block text-xs font-medium text-slate-300 mb-1">Вожатский позывной / никнейм</label>
-          <input type="text" id="staffNicknameInput" placeholder="Лёха / Капитан" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
+          <input type="text" id="staffNicknameInput" placeholder="Лёха / Капитан" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500">
         </div>
         <div>
-          <label class="block text-xs font-medium text-slate-300 mb-1">Специализация</label>
-          <select id="staffPrimaryRoleInput" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
+          <label class="block text-xs font-medium text-slate-300 mb-1">Основная специализация</label>
+          <select id="staffPrimaryRoleInput" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500">
             <option value="counselor">Линейный вожатый</option>
             <option value="trainee">Стажёр</option>
+            <option value="organizer">Организатор мероприятий</option>
+            <option value="lead">Старший вожатый / Наставник</option>
             <option value="sound">Звукорежиссёр / DJ</option>
-            <option value="media">Медиа-специалист</option>
-            <option value="universal">Универсал (Педагог + Техник)</option>
+            <option value="media">Медиа-специалист (Фото/Видео)</option>
+            <option value="admin">Комендант / Техперсонал</option>
           </select>
         </div>
         <div>
           <label class="block text-xs font-medium text-slate-300 mb-1">Контакты (Telegram / Телефон)</label>
-          <input type="text" id="staffContactInput" placeholder="@username" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
+          <input type="text" id="staffContactInput" placeholder="@username" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500">
         </div>
         <div class="flex justify-end gap-2 pt-2 border-t border-slate-700">
           <button type="button" onclick="closeStaffModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-xs font-medium">Отмена</button>
@@ -371,26 +614,26 @@
     </div>
   </div>
 
-  <!-- MODAL: ADD / EDIT CAMP -->
-  <div id="campModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl">
+  <!-- MODAL 6: ADD / EDIT CAMP -->
+  <div id="campModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 hidden">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-xl">
       <div class="flex justify-between items-center border-b border-slate-700 pb-3">
-        <h3 class="text-lg font-bold text-white" id="campModalTitle">Создать новый слёт</h3>
+        <h3 class="text-base sm:text-lg font-bold text-white" id="campModalTitle">Создать слёт</h3>
         <button onclick="closeCampModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
-      <form onsubmit="handleCampSubmit(event)" class="space-y-4">
+      <form onsubmit="handleCampSubmit(event)" class="space-y-3.5">
         <input type="hidden" id="campEditId" value="">
         <div>
           <label class="block text-xs font-medium text-slate-300 mb-1">Название слёта / смены *</label>
-          <input type="text" id="campNameInput" required placeholder="Осенний лидерский слёт 2026" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
+          <input type="text" id="campNameInput" required placeholder="Осенний лидерский слёт 2026" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500">
         </div>
         <div>
           <label class="block text-xs font-medium text-slate-300 mb-1">База / Локация</label>
-          <input type="text" id="campLocationInput" placeholder="ДОЛ «Лесной»" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
+          <input type="text" id="campLocationInput" placeholder="ДОЛ «Лесной»" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500">
         </div>
         <div>
           <label class="block text-xs font-medium text-slate-300 mb-1">Даты проведения</label>
-          <input type="text" id="campDatesInput" placeholder="24–28 октября 2026" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
+          <input type="text" id="campDatesInput" placeholder="24–28 октября 2026" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500">
         </div>
         <div class="flex justify-end gap-2 pt-2 border-t border-slate-700">
           <button type="button" onclick="closeCampModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-xs font-medium">Отмена</button>
@@ -400,110 +643,26 @@
     </div>
   </div>
 
-  <!-- MODAL: CAMP ROSTER (Управление списком людей на слёте) -->
-  <div id="rosterModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 hidden overflow-y-auto">
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-2xl w-full p-5 sm:p-6 space-y-5 my-6 shadow-2xl">
-      <div class="flex justify-between items-start border-b border-slate-700 pb-3">
+  <!-- MODAL 7: CUSTOM CONFIRM DIALOG (Замена confirm) -->
+  <div id="confirmModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-[9990] flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center gap-3">
+        <div id="confirmModalIcon" class="w-10 h-10 rounded-xl bg-rose-950/60 text-rose-400 border border-rose-800/60 flex items-center justify-center flex-shrink-0 font-bold">
+          <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+        </div>
         <div>
-          <h3 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2" id="rosterCampTitle">
-            <i data-lucide="users" class="text-indigo-400 w-5 h-5"></i> Состав команды слёта
-          </h3>
-          <p class="text-xs text-slate-400 mt-0.5" id="rosterCampMeta">Локация и даты</p>
-        </div>
-        <button onclick="closeRosterModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
-      </div>
-
-      <!-- Add Person to Camp Roster -->
-      <div class="bg-slate-900/70 p-3.5 rounded-xl border border-slate-700/70 space-y-2">
-        <label class="block text-xs font-semibold text-slate-300">Добавить человека в состав слёта:</label>
-        <div class="flex flex-wrap sm:flex-nowrap gap-2">
-          <select id="rosterAddStaffSelect" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs sm:text-sm text-slate-100 focus:outline-none focus:border-indigo-500">
-            <!-- Dynamically populated -->
-          </select>
-          <button onclick="addSelectedStaffToRoster()" class="w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm">
-            <i data-lucide="user-plus" class="w-4 h-4"></i> Включить в состав
-          </button>
+          <h4 class="text-base font-bold text-white" id="confirmModalTitle">Подтвердите действие</h4>
+          <p class="text-xs text-slate-400 mt-0.5" id="confirmModalMessage">Вы уверены?</p>
         </div>
       </div>
-
-      <!-- List of people enrolled -->
-      <div class="space-y-2">
-        <div class="flex justify-between items-center text-xs font-bold text-slate-400 uppercase tracking-wider">
-          <span>Сотрудники на этом слёте</span>
-          <span id="rosterCountBadge" class="text-indigo-400">0 человек</span>
-        </div>
-        <div id="rosterStaffList" class="space-y-2 max-h-64 overflow-y-auto pr-1">
-          <!-- Dynamically populated list -->
-        </div>
-      </div>
-
-      <div class="flex justify-end pt-2 border-t border-slate-700">
-        <button type="button" onclick="closeRosterModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-semibold">Готово</button>
+      <div class="flex justify-end gap-2 pt-2 border-t border-slate-700/60">
+        <button type="button" onclick="closeConfirmDialog()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-xs font-medium">Отмена</button>
+        <button type="button" id="confirmModalActionBtn" class="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold transition">Подтвердить</button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: DOSSIER & RADAR -->
-  <div id="dossierModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 hidden overflow-y-auto">
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-3xl w-full p-5 sm:p-6 space-y-5 my-6 shadow-2xl">
-      <div class="flex justify-between items-center border-b border-slate-700 pb-3">
-        <div>
-          <h3 class="text-xl font-bold text-white flex items-center gap-2" id="dosName">Досье сотрудника</h3>
-          <p class="text-xs text-slate-400" id="dosMeta">История смен и динамика компетенций</p>
-        </div>
-        <div class="flex items-center gap-2">
-          <button onclick="window.print()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-medium flex items-center gap-1.5 no-print">
-            <i data-lucide="printer" class="w-4 h-4"></i> Печать
-          </button>
-          <button onclick="closeDossierModal()" class="text-slate-400 hover:text-white no-print"><i data-lucide="x" class="w-5 h-5"></i></button>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-3 gap-3">
-        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700 text-center">
-          <div class="text-[10px] text-slate-400 uppercase font-semibold">Педагогический K</div>
-          <div class="text-2xl font-black text-indigo-400 mt-0.5" id="dosPedK">—</div>
-          <div class="text-[10px] text-slate-500">Вожатый / Стажёр</div>
-        </div>
-        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700 text-center">
-          <div class="text-[10px] text-slate-400 uppercase font-semibold">Технический K</div>
-          <div class="text-2xl font-black text-amber-400 mt-0.5" id="dosTechK">—</div>
-          <div class="text-[10px] text-slate-500">Звук / Медиа / База</div>
-        </div>
-        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700 text-center">
-          <div class="text-[10px] text-slate-400 uppercase font-semibold">Общий K-Индекс</div>
-          <div class="text-2xl font-black text-white mt-0.5" id="dosTotalK">—</div>
-          <div class="text-[10px] font-bold" id="dosCategoryBadge">Категория</div>
-        </div>
-      </div>
-
-      <div class="bg-slate-900/50 border border-slate-700/60 p-4 rounded-xl">
-        <div class="text-xs font-bold text-slate-300 uppercase mb-2">Профиль 6 векторов (в среднем по всем слётам)</div>
-        <div class="h-60 flex items-center justify-center">
-          <canvas id="radarChart"></canvas>
-        </div>
-      </div>
-
-      <div class="space-y-2">
-        <div class="text-xs font-bold text-slate-300 uppercase">История участий в слётах</div>
-        <div id="dosCampsHistory" class="space-y-2 max-h-40 overflow-y-auto pr-1"></div>
-      </div>
-
-      <div class="p-3.5 rounded-xl bg-slate-900/70 border border-slate-700 space-y-1">
-        <div class="text-xs font-bold text-indigo-300 uppercase flex items-center gap-1.5">
-          <i data-lucide="message-square" class="w-4 h-4"></i> Рекомендация для дебрифинга 1-на-1
-        </div>
-        <p class="text-xs text-slate-300 leading-relaxed" id="dosDebriefScript"></p>
-      </div>
-
-      <div class="print-only pt-8 grid grid-cols-2 gap-8 text-xs text-black">
-        <div>Куратор слёта: ___________________ / _________________ /</div>
-        <div>Руководитель смены: _______________ / _________________ /</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- SCRIPT LOGIC WITH FIREBASE -->
+  <!-- ==================== JAVASCRIPT LOGIC ==================== -->
   <script>
     const FIREBASE_CONFIG = {
       apiKey: "AIzaSyCCVxogvgq3ly3gQ9rPKsvhV1m38faHZyU",
@@ -520,14 +679,18 @@
     let evaluationsList = [];
     let activeRosterCampId = null;
     let radarChartInstance = null;
+    let campRadarChartInstance = null;
+    let currentSort = 'k_desc';
 
+    // ВЕСА ВЕКТОРОВ С УЧЕТОМ НОВОЙ РОЛИ "ОРГАНИЗАТОР"
     const ROLE_WEIGHTS = {
-      trainee:    { D: 0.25, A: 0.15, S: 0.20, T: 0.15, F: 0.05, L: 0.20, label: "Стажёр" },
-      counselor:  { D: 0.15, A: 0.30, S: 0.25, T: 0.15, F: 0.10, L: 0.05, label: "Линейный вожатый" },
-      lead:       { D: 0.20, A: 0.20, S: 0.25, T: 0.15, F: 0.15, L: 0.05, label: "Старший вожатый / Координатор" },
-      sound:      { D: 0.30, A: 0.05, S: 0.25, T: 0.20, F: 0.10, L: 0.10, label: "Звукорежиссёр / DJ" },
-      media:      { D: 0.25, A: 0.10, S: 0.10, T: 0.25, F: 0.15, L: 0.15, label: "Медиа-центр" },
-      admin:      { D: 0.35, A: 0.05, S: 0.25, T: 0.20, F: 0.10, L: 0.05, label: "Комендант / Техперсонал" }
+      trainee:    { D: 0.25, A: 0.15, S: 0.20, T: 0.15, F: 0.05, L: 0.20, label: "Стажёр", type: "ped" },
+      counselor:  { D: 0.15, A: 0.30, S: 0.25, T: 0.15, F: 0.10, L: 0.05, label: "Линейный вожатый", type: "ped" },
+      lead:       { D: 0.20, A: 0.20, S: 0.25, T: 0.15, F: 0.15, L: 0.05, label: "Старший вожатый", type: "ped" },
+      organizer:  { D: 0.25, A: 0.25, S: 0.15, T: 0.20, F: 0.15, L: 0.00, label: "Организатор мероприятий", type: "org" },
+      sound:      { D: 0.30, A: 0.05, S: 0.25, T: 0.20, F: 0.10, L: 0.10, label: "Звукорежиссёр / DJ", type: "tech" },
+      media:      { D: 0.25, A: 0.10, S: 0.10, T: 0.25, F: 0.15, L: 0.15, label: "Медиа-центр", type: "tech" },
+      admin:      { D: 0.35, A: 0.05, S: 0.25, T: 0.20, F: 0.10, L: 0.05, label: "Комендант / Техперсонал", type: "tech" }
     };
 
     window.addEventListener('DOMContentLoaded', () => {
@@ -535,6 +698,58 @@
       initFirebase();
     });
 
+    /* ================= TOAST NOTIFICATIONS & CONFIRM DIALOG ================= */
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      
+      let borderClass = 'border-emerald-500/50 bg-slate-900/95 text-emerald-300';
+      let icon = 'check-circle';
+      if (type === 'error') {
+        borderClass = 'border-rose-500/50 bg-slate-900/95 text-rose-300';
+        icon = 'alert-triangle';
+      } else if (type === 'info') {
+        borderClass = 'border-indigo-500/50 bg-slate-900/95 text-indigo-300';
+        icon = 'info';
+      }
+
+      toast.className = `pointer-events-auto p-3 rounded-xl border ${borderClass} shadow-xl flex items-center gap-2.5 text-xs font-semibold transform transition-all duration-300 translate-y-2 opacity-0`;
+      toast.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4 flex-shrink-0"></i> <span>${message}</span>`;
+      container.appendChild(toast);
+      lucide.createIcons();
+
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', '-translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    function showConfirmDialog({ title, message, confirmText = 'Подтвердить', isDanger = true, onConfirm }) {
+      const modal = document.getElementById('confirmModal');
+      document.getElementById('confirmModalTitle').textContent = title;
+      document.getElementById('confirmModalMessage').textContent = message;
+      const btn = document.getElementById('confirmModalActionBtn');
+      btn.textContent = confirmText;
+      btn.className = isDanger
+        ? 'px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold transition shadow-sm'
+        : 'px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition shadow-sm';
+      btn.onclick = () => {
+        closeConfirmDialog();
+        if (onConfirm) onConfirm();
+      };
+      modal.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeConfirmDialog() {
+      document.getElementById('confirmModal').classList.add('hidden');
+    }
+
+    /* ================= FIREBASE INIT ================= */
     function initFirebase() {
       try {
         if (!firebase.apps.length) {
@@ -542,56 +757,43 @@
         }
         db = firebase.firestore();
 
-        document.getElementById('cloudStatusText').textContent = 'Cloud Firestore активен';
-        document.getElementById('cloudStatus').className = 'flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-950/60 text-emerald-300 border border-emerald-500/40';
+        document.getElementById('cloudStatusText').textContent = 'Cloud Firestore';
+        document.getElementById('cloudStatus').className = 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-emerald-950/60 text-emerald-300 border border-emerald-500/40';
         document.getElementById('cloudStatusDot').className = 'w-2 h-2 rounded-full bg-emerald-400';
 
         subscribeToFirestoreCollections();
       } catch (err) {
         console.error("Firebase Init Error:", err);
-        document.getElementById('cloudStatusText').textContent = 'Ошибка подключения к БД';
+        document.getElementById('cloudStatusText').textContent = 'Ошибка БД';
         document.getElementById('cloudStatusDot').className = 'w-2 h-2 rounded-full bg-rose-500';
+        showToast("Ошибка подключения к базе: " + err.message, "error");
       }
     }
 
     function subscribeToFirestoreCollections() {
-      // Подписка на слёты
       db.collection('camps').onSnapshot(snap => {
         campsList = [];
         snap.forEach(doc => campsList.push({ id: doc.id, ...doc.data() }));
-        if (campsList.length === 0 && staffList.length === 0) {
-          seedInitialCloudData();
-        } else {
-          updateAllViews();
-          if (activeRosterCampId) renderRosterModalContent(activeRosterCampId);
-        }
-      }, err => console.warn("Camps error", err));
+        updateAllViews();
+        if (activeRosterCampId) renderRosterModalContent(activeRosterCampId);
+      }, err => console.warn("Camps snapshot error", err));
 
-      // Подписка на персонал
       db.collection('staff').onSnapshot(snap => {
         staffList = [];
         snap.forEach(doc => staffList.push({ id: doc.id, ...doc.data() }));
         updateAllViews();
         if (activeRosterCampId) renderRosterModalContent(activeRosterCampId);
-      }, err => console.warn("Staff error", err));
+      }, err => console.warn("Staff snapshot error", err));
 
-      // Подписка на оценки
       db.collection('evaluations').onSnapshot(snap => {
         evaluationsList = [];
         snap.forEach(doc => evaluationsList.push({ id: doc.id, ...doc.data() }));
         updateAllViews();
         if (activeRosterCampId) renderRosterModalContent(activeRosterCampId);
-      }, err => console.warn("Evaluations error", err));
+      }, err => console.warn("Evaluations snapshot error", err));
     }
 
-    function seedInitialCloudData() {
-      const initialCamp = { name: 'Первый лидерский слёт 2026', location: 'Главная база', dates: 'Сезон 2026', roster: [] };
-      const initialStaff = { name: 'Алексей Смирнов', nickname: 'Капитан', primaryRole: 'counselor', contact: '@captain' };
-      
-      db.collection('camps').add(initialCamp);
-      db.collection('staff').add(initialStaff);
-    }
-
+    /* ================= TABS ================= */
     function switchTab(tabId) {
       document.querySelectorAll('main > section').forEach(sec => sec.classList.add('hidden'));
       document.getElementById(`tab-${tabId}`).classList.remove('hidden');
@@ -603,308 +805,36 @@
       const activeBtn = document.getElementById(`tabBtn-${tabId}`);
       activeBtn.classList.add('bg-indigo-600', 'text-white');
       activeBtn.classList.remove('text-slate-400');
-
-      if (tabId === 'evaluation') {
-        populateEvaluationDropdowns();
-        calculateWizardScore();
-      }
     }
 
     function updateAllViews() {
       renderSummaryCards();
       renderStaffRegistry();
       renderCampsList();
-      populateEvaluationDropdowns();
+      populateCampSelectDropdown();
       lucide.createIcons();
     }
 
-    /* ---------------- STAFF CRUD ---------------- */
-    function openStaffModal(staffId = null) {
-      const modal = document.getElementById('staffModal');
-      const title = document.getElementById('staffModalTitle');
-      const submitBtn = document.getElementById('staffModalSubmitBtn');
-      const editInput = document.getElementById('staffEditId');
-
-      if (staffId) {
-        const member = staffList.find(s => s.id === staffId);
-        if (!member) return;
-        editInput.value = member.id;
-        document.getElementById('staffNameInput').value = member.name || '';
-        document.getElementById('staffNicknameInput').value = member.nickname || '';
-        document.getElementById('staffPrimaryRoleInput').value = member.primaryRole || 'counselor';
-        document.getElementById('staffContactInput').value = member.contact || '';
-        title.textContent = 'Редактировать сотрудника';
-        submitBtn.textContent = 'Обновить данные';
-      } else {
-        editInput.value = '';
-        document.getElementById('staffNameInput').value = '';
-        document.getElementById('staffNicknameInput').value = '';
-        document.getElementById('staffPrimaryRoleInput').value = 'counselor';
-        document.getElementById('staffContactInput').value = '';
-        title.textContent = 'Добавить сотрудника';
-        submitBtn.textContent = 'Сохранить';
-      }
-      modal.classList.remove('hidden');
-    }
-
-    function closeStaffModal() {
-      document.getElementById('staffModal').classList.add('hidden');
-    }
-
-    function handleStaffSubmit(e) {
-      e.preventDefault();
-      const editId = document.getElementById('staffEditId').value;
-      const data = {
-        name: document.getElementById('staffNameInput').value.trim(),
-        nickname: document.getElementById('staffNicknameInput').value.trim(),
-        primaryRole: document.getElementById('staffPrimaryRoleInput').value,
-        contact: document.getElementById('staffContactInput').value.trim()
-      };
-
-      if (editId) {
-        db.collection('staff').doc(editId).update(data).then(() => {
-          closeStaffModal();
-        }).catch(err => alert("Ошибка обновления: " + err.message));
-      } else {
-        data.createdAt = Date.now();
-        db.collection('staff').add(data).then(() => {
-          closeStaffModal();
-        }).catch(err => alert("Ошибка добавления: " + err.message));
-      }
-    }
-
-    function deleteStaff(staffId) {
-      const member = staffList.find(s => s.id === staffId);
-      if (!member) return;
-
-      const confirmText = `Вы действительно хотите удалить сотрудника "${member.name}"?\nВсе его оценки и участие в слётах также будут удалены!`;
-      if (!confirm(confirmText)) return;
-
-      // 1. Delete staff doc
-      db.collection('staff').doc(staffId).delete().then(() => {
-        // 2. Cascade delete evaluations
-        evaluationsList.filter(e => e.staffId === staffId).forEach(ev => {
-          db.collection('evaluations').doc(ev.id).delete();
-        });
-
-        // 3. Remove from all camp rosters
-        campsList.forEach(camp => {
-          if (camp.roster && camp.roster.includes(staffId)) {
-            const updated = camp.roster.filter(id => id !== staffId);
-            db.collection('camps').doc(camp.id).update({ roster: updated });
-          }
-        });
-      }).catch(err => alert("Ошибка удаления: " + err.message));
-    }
-
-    /* ---------------- CAMP CRUD & ROSTER ---------------- */
-    function openCampModal(campId = null) {
-      const modal = document.getElementById('campModal');
-      const title = document.getElementById('campModalTitle');
-      const submitBtn = document.getElementById('campModalSubmitBtn');
-      const editInput = document.getElementById('campEditId');
-
-      if (campId) {
-        const camp = campsList.find(c => c.id === campId);
-        if (!camp) return;
-        editInput.value = camp.id;
-        document.getElementById('campNameInput').value = camp.name || '';
-        document.getElementById('campLocationInput').value = camp.location || '';
-        document.getElementById('campDatesInput').value = camp.dates || '';
-        title.textContent = 'Редактировать слёт';
-        submitBtn.textContent = 'Обновить слёт';
-      } else {
-        editInput.value = '';
-        document.getElementById('campNameInput').value = '';
-        document.getElementById('campLocationInput').value = '';
-        document.getElementById('campDatesInput').value = '';
-        title.textContent = 'Создать новый слёт';
-        submitBtn.textContent = 'Создать слёт';
-      }
-      modal.classList.remove('hidden');
-    }
-
-    function closeCampModal() {
-      document.getElementById('campModal').classList.add('hidden');
-    }
-
-    function handleCampSubmit(e) {
-      e.preventDefault();
-      const editId = document.getElementById('campEditId').value;
-      const data = {
-        name: document.getElementById('campNameInput').value.trim(),
-        location: document.getElementById('campLocationInput').value.trim(),
-        dates: document.getElementById('campDatesInput').value.trim()
-      };
-
-      if (editId) {
-        db.collection('camps').doc(editId).update(data).then(() => {
-          closeCampModal();
-        }).catch(err => alert("Ошибка обновления: " + err.message));
-      } else {
-        data.roster = [];
-        data.createdAt = Date.now();
-        db.collection('camps').add(data).then(() => {
-          closeCampModal();
-        }).catch(err => alert("Ошибка создания слёта: " + err.message));
-      }
-    }
-
-    function deleteCamp(campId) {
-      const camp = campsList.find(c => c.id === campId);
-      if (!camp) return;
-
-      const confirmText = `Вы уверены, что хотите удалить слёт "${camp.name}"?\nВсе выставленные на нём оценки будут удалены!`;
-      if (!confirm(confirmText)) return;
-
-      db.collection('camps').doc(campId).delete().then(() => {
-        // Cascade delete evaluations
-        evaluationsList.filter(e => e.campId === campId).forEach(ev => {
-          db.collection('evaluations').doc(ev.id).delete();
-        });
-      }).catch(err => alert("Ошибка удаления: " + err.message));
-    }
-
-    /* ---------------- ROSTER MANAGEMENT (Люди на конкретный слёт) ---------------- */
-    function openRosterModal(campId) {
-      activeRosterCampId = campId;
-      renderRosterModalContent(campId);
-      document.getElementById('rosterModal').classList.remove('hidden');
-      lucide.createIcons();
-    }
-
-    function closeRosterModal() {
-      activeRosterCampId = null;
-      document.getElementById('rosterModal').classList.add('hidden');
-    }
-
-    function renderRosterModalContent(campId) {
-      const camp = campsList.find(c => c.id === campId);
-      if (!camp) return;
-
-      document.getElementById('rosterCampTitle').innerHTML = `<i data-lucide="users" class="text-indigo-400 w-5 h-5"></i> ${camp.name}`;
-      document.getElementById('rosterCampMeta').textContent = `Локация: ${camp.location || '—'} • Даты: ${camp.dates || '—'}`;
-
-      const roster = camp.roster || [];
-      document.getElementById('rosterCountBadge').textContent = `${roster.length} вожатых / сотрудников`;
-
-      // 1. Populate the Add select dropdown with staff NOT YET in this roster
-      const select = document.getElementById('rosterAddStaffSelect');
-      const availableStaff = staffList.filter(s => !roster.includes(s.id));
-      if (availableStaff.length === 0) {
-        select.innerHTML = '<option value="" disabled selected>Все сотрудники из базы уже добавлены в этот слёт</option>';
-      } else {
-        select.innerHTML = '<option value="" disabled selected>Выберите человека из общего реестра...</option>' +
-          availableStaff.map(s => `<option value="${s.id}">${s.name} ${s.nickname ? '«'+s.nickname+'»' : ''} (${ROLE_WEIGHTS[s.primaryRole]?.label || s.primaryRole})</option>`).join('');
-      }
-
-      // 2. Populate the roster list
-      const listContainer = document.getElementById('rosterStaffList');
-      listContainer.innerHTML = '';
-
-      if (roster.length === 0) {
-        listContainer.innerHTML = '<div class="p-6 text-center text-xs text-slate-500 bg-slate-900/40 rounded-xl border border-slate-800">В этот слёт пока никто не записан. Выберите сотрудника выше и нажмите «Включить в состав».</div>';
-        return;
-      }
-
-      roster.forEach(staffId => {
-        const staff = staffList.find(s => s.id === staffId);
-        if (!staff) return;
-
-        // Check if evaluated for this camp
-        const evalForCamp = evaluationsList.find(e => e.campId === campId && e.staffId === staffId);
-        const item = document.createElement('div');
-        item.className = 'flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 p-3 rounded-xl bg-slate-900/60 border border-slate-700/60 hover:border-slate-600 transition';
-
-        let statusHtml = '';
-        if (evalForCamp) {
-          statusHtml = `<span class="text-xs px-2 py-0.5 rounded font-bold ${evalForCamp.finalScore >= 4.3 ? 'bg-amber-950/80 text-amber-300 border border-amber-600/40' : (evalForCamp.finalScore >= 3.6 ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-600/40' : 'bg-rose-950/80 text-rose-300 border border-rose-600/40')}">K = ${evalForCamp.finalScore.toFixed(2)}</span>`;
-        } else {
-          statusHtml = `<span class="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">Ожидает оценки</span>`;
-        }
-
-        item.innerHTML = `
-          <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-indigo-950 text-indigo-300 border border-indigo-700/40 flex items-center justify-center font-bold text-xs">
-              ${staff.name.charAt(0)}
-            </div>
-            <div>
-              <div class="font-bold text-sm text-white flex items-center gap-2">
-                ${staff.name}
-                ${staff.nickname ? '<span class="text-xs text-slate-400 font-normal">«'+staff.nickname+'»</span>' : ''}
-              </div>
-              <div class="text-[11px] text-slate-400">${ROLE_WEIGHTS[staff.primaryRole]?.label || staff.primaryRole}</div>
-            </div>
-          </div>
-          <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
-            ${statusHtml}
-            <button onclick="evaluateFromRoster('${campId}', '${staff.id}')" class="px-2.5 py-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 text-xs font-medium transition flex items-center gap-1" title="Оценить за этот слёт">
-              <i data-lucide="award" class="w-3.5 h-3.5"></i> Оценить
-            </button>
-            <button onclick="removeStaffFromRoster('${campId}', '${staff.id}')" class="p-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900/80 text-rose-300 border border-rose-800/50 transition" title="Исключить со слёта">
-              <i data-lucide="user-minus" class="w-3.5 h-3.5"></i>
-            </button>
-          </div>
-        `;
-        listContainer.appendChild(item);
-      });
-      lucide.createIcons();
-    }
-
-    function addSelectedStaffToRoster() {
-      if (!activeRosterCampId) return;
-      const select = document.getElementById('rosterAddStaffSelect');
-      const staffId = select.value;
-      if (!staffId) return;
-
-      const camp = campsList.find(c => c.id === activeRosterCampId);
-      if (!camp) return;
-
-      const currentRoster = camp.roster || [];
-      if (!currentRoster.includes(staffId)) {
-        const updated = [...currentRoster, staffId];
-        db.collection('camps').doc(activeRosterCampId).update({ roster: updated }).catch(err => alert("Ошибка: " + err.message));
-      }
-    }
-
-    function removeStaffFromRoster(campId, staffId) {
-      const camp = campsList.find(c => c.id === campId);
-      const staff = staffList.find(s => s.id === staffId);
-      if (!camp || !staff) return;
-
-      if (!confirm(`Исключить ${staff.name} из состава слёта "${camp.name}"?`)) return;
-
-      const updated = (camp.roster || []).filter(id => id !== staffId);
-      db.collection('camps').doc(campId).update({ roster: updated }).catch(err => alert("Ошибка: " + err.message));
-    }
-
-    function evaluateFromRoster(campId, staffId) {
-      closeRosterModal();
-      switchTab('evaluation');
-      document.getElementById('evalCampSelect').value = campId;
-      document.getElementById('evalStaffSelect').value = staffId;
-      calculateWizardScore();
-    }
-
-    /* ---------------- EVALUATION & CALCULATIONS ---------------- */
+    /* ================= STAFF CALCULATION ENGINE ================= */
     function calculateStaffMultiCampK(staffId) {
       const evals = evaluationsList.filter(e => e.staffId === staffId);
       if (evals.length === 0) {
-        return { overallK: 0, pedK: null, techK: null, trend: '—', count: 0, isStopListed: false, avgVectors: { D:0,A:0,S:0,T:0,F:0,L:0 } };
+        return { overallK: 0, pedK: null, orgK: null, techK: null, trend: '—', count: 0, isStopListed: false, avgVectors: { D:0,A:0,S:0,T:0,F:0,L:0 } };
       }
 
       let isStopListed = false;
       const pedScores = [];
+      const orgScores = [];
       const techScores = [];
       const vectorSums = { D: 0, A: 0, S: 0, T: 0, F: 0, L: 0 };
 
       evals.forEach(ev => {
         if (ev.finalScore === 0) isStopListed = true;
-        if (['trainee', 'counselor', 'lead'].includes(ev.role)) {
-          pedScores.push(ev.finalScore);
-        } else {
-          techScores.push(ev.finalScore);
-        }
+        const roleType = ROLE_WEIGHTS[ev.role]?.type || 'ped';
+        if (roleType === 'ped') pedScores.push(ev.finalScore);
+        else if (roleType === 'org') orgScores.push(ev.finalScore);
+        else techScores.push(ev.finalScore);
+
         if (ev.vectors) {
           for (let k in vectorSums) vectorSums[k] += (ev.vectors[k] || 4.0);
         }
@@ -912,6 +842,7 @@
 
       const avg = arr => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length) : null;
       const pedK = avg(pedScores);
+      const orgK = avg(orgScores);
       const techK = avg(techScores);
 
       let overallK = 0;
@@ -944,6 +875,7 @@
       return {
         overallK: parseFloat(overallK.toFixed(2)),
         pedK: pedK ? parseFloat(pedK.toFixed(2)) : null,
+        orgK: orgK ? parseFloat(orgK.toFixed(2)) : null,
         techK: techK ? parseFloat(techK.toFixed(2)) : null,
         trend,
         count: evals.length,
@@ -968,92 +900,193 @@
       document.getElementById('statStopList').textContent = stop;
     }
 
+    /* ================= SORTING & FILTERING ================= */
+    function setSort(sortKey) {
+      currentSort = sortKey;
+      document.getElementById('sortSelect').value = sortKey;
+      renderStaffRegistry();
+    }
+
     function renderStaffRegistry() {
-      const tbody = document.getElementById('staffTableBody');
       const search = document.getElementById('searchInput').value.toLowerCase();
       const roleFilter = document.getElementById('roleFilter').value;
-      tbody.innerHTML = '';
+      currentSort = document.getElementById('sortSelect').value;
 
       let filtered = staffList.filter(s => {
         const matchesSearch = s.name.toLowerCase().includes(search) || (s.nickname && s.nickname.toLowerCase().includes(search));
         if (!matchesSearch) return false;
 
-        const metrics = calculateStaffMultiCampK(s.id);
-        if (roleFilter === 'pedagogical') return metrics.pedK !== null && metrics.techK === null;
-        if (roleFilter === 'technical') return metrics.techK !== null && metrics.pedK === null;
-        if (roleFilter === 'mixed') return metrics.pedK !== null && metrics.techK !== null;
+        const m = calculateStaffMultiCampK(s.id);
+        if (roleFilter === 'stop') return m.isStopListed;
+        if (roleFilter === 'pedagogical') return m.pedK !== null;
+        if (roleFilter === 'organizer') return m.orgK !== null;
+        if (roleFilter === 'technical') return m.techK !== null;
         return true;
       });
 
-      if (filtered.length === 0) {
-        document.getElementById('emptyStaffNotice').classList.remove('hidden');
-        return;
-      }
-      document.getElementById('emptyStaffNotice').classList.add('hidden');
+      // Sorting
+      filtered.sort((a, b) => {
+        const ma = calculateStaffMultiCampK(a.id);
+        const mb = calculateStaffMultiCampK(b.id);
+        if (currentSort === 'k_desc') return mb.overallK - ma.overallK;
+        if (currentSort === 'k_asc') return ma.overallK - mb.overallK;
+        if (currentSort === 'name_asc') return a.name.localeCompare(b.name, 'ru');
+        if (currentSort === 'camps_desc') return mb.count - ma.count;
+        if (currentSort === 'ped_desc') return (mb.pedK || 0) - (ma.pedK || 0);
+        if (currentSort === 'org_desc') return (mb.orgK || 0) - (ma.orgK || 0);
+        if (currentSort === 'tech_desc') return (mb.techK || 0) - (ma.techK || 0);
+        return 0;
+      });
 
-      filtered.forEach(member => {
-        const metrics = calculateStaffMultiCampK(member.id);
+      const emptyNotice = document.getElementById('emptyStaffNotice');
+      if (filtered.length === 0) {
+        emptyNotice.classList.remove('hidden');
+      } else {
+        emptyNotice.classList.add('hidden');
+      }
+
+      // Render Desktop Table
+      renderDesktopTable(filtered);
+      // Render Mobile Cards
+      renderMobileCards(filtered);
+
+      lucide.createIcons();
+    }
+
+    function getCategoryBadge(m) {
+      if (m.isStopListed) {
+        return { label: 'Стоп-лист', class: 'bg-rose-950/80 text-rose-300 border border-rose-600/50' };
+      }
+      if (m.count === 0) {
+        return { label: 'Новичок', class: 'bg-slate-700/80 text-slate-300 border border-slate-600' };
+      }
+      if (m.overallK >= 4.3) {
+        return { label: 'Золотой фонд', class: 'bg-amber-950/80 text-amber-300 border border-amber-500/50' };
+      }
+      if (m.overallK >= 3.6) {
+        return { label: 'Основа', class: 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/50' };
+      }
+      return { label: 'Зона риска', class: 'bg-rose-950/80 text-rose-300 border border-rose-500/50' };
+    }
+
+    function renderDesktopTable(list) {
+      const tbody = document.getElementById('staffTableBody');
+      tbody.innerHTML = '';
+
+      list.forEach(member => {
+        const m = calculateStaffMultiCampK(member.id);
+        const badge = getCategoryBadge(m);
         const tr = document.createElement('tr');
         tr.className = 'hover:bg-slate-800/80 transition';
 
-        let badgeClass = 'bg-slate-700 text-slate-300';
-        let badgeLabel = 'Нет слётов';
-
-        if (metrics.isStopListed) {
-          badgeClass = 'bg-rose-900/60 text-rose-300 border border-rose-600/40';
-          badgeLabel = 'Стоп-лист';
-        } else if (metrics.count > 0) {
-          if (metrics.overallK >= 4.3) {
-            badgeClass = 'bg-amber-950/60 text-amber-300 border border-amber-500/40';
-            badgeLabel = 'Золотой фонд';
-          } else if (metrics.overallK >= 3.6) {
-            badgeClass = 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/40';
-            badgeLabel = 'Основа команды';
-          } else {
-            badgeClass = 'bg-rose-950/60 text-rose-300 border border-rose-500/40';
-            badgeLabel = 'Зона риска';
-          }
-        }
-
         tr.innerHTML = `
           <td class="py-3 px-4">
-            <div class="font-bold text-white">${member.name}</div>
-            <div class="text-xs text-slate-400">${member.nickname ? '«' + member.nickname + '» • ' : ''}${member.contact || 'Нет контактов'}</div>
+            <div class="font-bold text-white flex items-center gap-1.5">
+              ${member.name}
+              ${member.nickname ? '<span class="text-xs text-slate-400 font-normal">«'+member.nickname+'»</span>' : ''}
+            </div>
+            <div class="text-xs text-slate-400">${ROLE_WEIGHTS[member.primaryRole]?.label || member.primaryRole}</div>
           </td>
-          <td class="py-3 px-4 text-slate-300 font-semibold">${metrics.count}</td>
-          <td class="py-3 px-4 font-bold text-indigo-400">${metrics.pedK !== null ? metrics.pedK : '—'}</td>
-          <td class="py-3 px-4 font-bold text-amber-400">${metrics.techK !== null ? metrics.techK : '—'}</td>
-          <td class="py-3 px-4">
-            <span class="text-base font-extrabold ${metrics.isStopListed ? 'text-rose-400' : 'text-white'}">
-              ${metrics.count > 0 ? (metrics.isStopListed ? '0.00' : metrics.overallK) : '—'}
+          <td class="py-3 px-3 text-center text-slate-300 font-semibold">${m.count}</td>
+          <td class="py-3 px-3 text-center font-bold text-indigo-400">${m.pedK !== null ? m.pedK : '—'}</td>
+          <td class="py-3 px-3 text-center font-bold text-purple-400">${m.orgK !== null ? m.orgK : '—'}</td>
+          <td class="py-3 px-3 text-center font-bold text-amber-400">${m.techK !== null ? m.techK : '—'}</td>
+          <td class="py-3 px-3 text-center font-black text-base ${m.isStopListed ? 'text-rose-400' : 'text-white'}">
+            ${m.count > 0 ? (m.isStopListed ? '0.00' : m.overallK) : '—'}
+          </td>
+          <td class="py-3 px-3 text-center text-xs text-slate-300 font-semibold">${m.trend}</td>
+          <td class="py-3 px-3 text-center">
+            <span class="text-[11px] px-2 py-0.5 rounded-full font-semibold ${badge.class}">
+              ${badge.label}
             </span>
           </td>
-          <td class="py-3 px-4 text-xs font-semibold text-slate-300">${metrics.trend}</td>
-          <td class="py-3 px-4">
-            <span class="text-xs px-2.5 py-1 rounded-full font-semibold ${badgeClass}">
-              ${badgeLabel}
-            </span>
-          </td>
-          <td class="py-3 px-4 text-right space-x-1.5">
-            <button onclick="viewDossier('${member.id}')" class="p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-indigo-300 transition" title="Открыть досье и диаграмму">
+          <td class="py-3 px-4 text-right space-x-1">
+            <button onclick="viewDossier('${member.id}')" class="p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-indigo-300 transition" title="Досье сотрудника">
               <i data-lucide="file-text" class="w-4 h-4"></i>
             </button>
-            <button onclick="quickEvaluate('${member.id}')" class="p-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition" title="Оценить за слёт">
-              <i data-lucide="plus" class="w-4 h-4"></i>
+            <button onclick="openEvaluationModal(null, '${member.id}')" class="p-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition" title="Оценить">
+              <i data-lucide="award" class="w-4 h-4"></i>
             </button>
-            <button onclick="openStaffModal('${member.id}')" class="p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 transition" title="Редактировать человека">
+            <button onclick="openStaffModal('${member.id}')" class="p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition" title="Редактировать">
               <i data-lucide="pencil" class="w-4 h-4"></i>
             </button>
-            <button onclick="deleteStaff('${member.id}')" class="p-1.5 rounded-lg bg-rose-950/50 hover:bg-rose-900 text-rose-300 border border-rose-800/40 transition" title="Удалить из базы">
+            <button onclick="deleteStaff('${member.id}')" class="p-1.5 rounded-lg bg-rose-950/50 hover:bg-rose-900 text-rose-300 border border-rose-800/40 transition" title="Удалить">
               <i data-lucide="trash-2" class="w-4 h-4"></i>
             </button>
           </td>
         `;
         tbody.appendChild(tr);
       });
-      lucide.createIcons();
     }
 
+    function renderMobileCards(list) {
+      const container = document.getElementById('staffCardsContainer');
+      container.innerHTML = '';
+
+      list.forEach(member => {
+        const m = calculateStaffMultiCampK(member.id);
+        const badge = getCategoryBadge(m);
+        const card = document.createElement('div');
+        card.className = 'bg-slate-800/80 border border-slate-700/60 rounded-xl p-3.5 space-y-3 shadow-sm';
+
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <div class="font-bold text-white text-sm flex items-center gap-1.5">
+                ${member.name}
+                ${member.nickname ? '<span class="text-xs text-slate-400 font-normal">«'+member.nickname+'»</span>' : ''}
+              </div>
+              <div class="text-[11px] text-slate-400 mt-0.5">${ROLE_WEIGHTS[member.primaryRole]?.label || member.primaryRole} • ${member.contact || 'Нет контакта'}</div>
+            </div>
+            <div class="text-right flex flex-col items-end">
+              <div class="text-lg font-black ${m.isStopListed ? 'text-rose-400' : 'text-white'}">
+                ${m.count > 0 ? (m.isStopListed ? '0.00' : m.overallK) : '—'}
+              </div>
+              <span class="text-[10px] px-2 py-0.5 rounded-full font-semibold ${badge.class}">
+                ${badge.label}
+              </span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-4 gap-1.5 bg-slate-900/60 p-2 rounded-lg text-center text-[10px]">
+            <div>
+              <div class="text-slate-500 uppercase">Слётов</div>
+              <div class="font-bold text-white mt-0.5">${m.count}</div>
+            </div>
+            <div>
+              <div class="text-slate-500 uppercase">Пед. K</div>
+              <div class="font-bold text-indigo-400 mt-0.5">${m.pedK !== null ? m.pedK : '—'}</div>
+            </div>
+            <div>
+              <div class="text-slate-500 uppercase">Орг. K</div>
+              <div class="font-bold text-purple-400 mt-0.5">${m.orgK !== null ? m.orgK : '—'}</div>
+            </div>
+            <div>
+              <div class="text-slate-500 uppercase">Тех. K</div>
+              <div class="font-bold text-amber-400 mt-0.5">${m.techK !== null ? m.techK : '—'}</div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-1.5 pt-1">
+            <button onclick="viewDossier('${member.id}')" class="flex-1 py-1.5 bg-slate-700 hover:bg-slate-600 text-indigo-300 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1">
+              <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Досье
+            </button>
+            <button onclick="openEvaluationModal(null, '${member.id}')" class="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1">
+              <i data-lucide="award" class="w-3.5 h-3.5"></i> Оценить
+            </button>
+            <button onclick="openStaffModal('${member.id}')" class="p-1.5 bg-slate-700 text-slate-300 rounded-lg" title="Редактировать">
+              <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+            </button>
+            <button onclick="deleteStaff('${member.id}')" class="p-1.5 bg-rose-950/60 text-rose-300 border border-rose-800/40 rounded-lg" title="Удалить">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    /* ================= CAMPS LIST & METRICS ================= */
     function renderCampsList() {
       const container = document.getElementById('campsList');
       container.innerHTML = '';
@@ -1066,19 +1099,27 @@
 
       campsList.forEach(c => {
         const rosterCount = (c.roster || []).length;
-        const evalsCount = evaluationsList.filter(e => e.campId === c.id).length;
+        const campEvals = evaluationsList.filter(e => e.campId === c.id);
+        const evalsCount = campEvals.length;
+        
+        let avgScore = '—';
+        if (campEvals.length > 0) {
+          const sum = campEvals.reduce((acc, curr) => acc + curr.finalScore, 0);
+          avgScore = (sum / campEvals.length).toFixed(2);
+        }
+
         const card = document.createElement('div');
-        card.className = 'bg-slate-900/60 border border-slate-700/60 p-4 sm:p-5 rounded-xl flex flex-col justify-between gap-4 hover:border-slate-600 transition shadow-sm';
+        card.className = 'bg-slate-800/80 border border-slate-700/60 p-4 rounded-xl flex flex-col justify-between gap-3 hover:border-slate-600 transition shadow-sm';
         card.innerHTML = `
           <div>
             <div class="flex items-start justify-between gap-2">
-              <div class="font-bold text-white text-base sm:text-lg">${c.name}</div>
+              <div class="font-bold text-white text-base">${c.name}</div>
               <div class="flex items-center gap-1">
-                <button onclick="openCampModal('${c.id}')" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="Редактировать параметры слёта">
-                  <i data-lucide="pencil" class="w-4 h-4"></i>
+                <button onclick="openCampModal('${c.id}')" class="p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition" title="Редактировать слёт">
+                  <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                 </button>
                 <button onclick="deleteCamp('${c.id}')" class="p-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900 text-rose-400 border border-rose-800/40 transition" title="Удалить слёт">
-                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                 </button>
               </div>
             </div>
@@ -1086,18 +1127,24 @@
               <span>📍 ${c.location || 'Локация не указана'}</span>
               <span>📅 ${c.dates || 'Даты не указаны'}</span>
             </div>
-            <div class="flex items-center gap-3 mt-3 pt-3 border-t border-slate-800 text-xs">
+            <div class="flex items-center gap-3 mt-3 pt-2.5 border-t border-slate-700/60 text-xs">
               <span class="text-indigo-400 font-semibold flex items-center gap-1">
-                <i data-lucide="users" class="w-3.5 h-3.5"></i> В составе: ${rosterCount} чел.
+                <i data-lucide="users" class="w-3.5 h-3.5"></i> В составе: ${rosterCount}
               </span>
               <span class="text-emerald-400 font-semibold flex items-center gap-1">
                 <i data-lucide="award" class="w-3.5 h-3.5"></i> Оценено: ${evalsCount}
               </span>
+              <span class="text-amber-300 font-bold ml-auto">
+                Средний K: ${avgScore}
+              </span>
             </div>
           </div>
           <div class="flex items-center gap-2 pt-1">
-            <button onclick="openRosterModal('${c.id}')" class="flex-1 py-2 px-3 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 border border-indigo-500/30">
-              <i data-lucide="users" class="w-4 h-4"></i> Управление составом (${rosterCount})
+            <button onclick="openRosterModal('${c.id}')" class="flex-1 py-1.5 px-2 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 border border-indigo-500/30">
+              <i data-lucide="users" class="w-3.5 h-3.5"></i> Состав (${rosterCount})
+            </button>
+            <button onclick="viewCampDossier('${c.id}')" class="flex-1 py-1.5 px-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5">
+              <i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i> Досье слёта
             </button>
           </div>
         `;
@@ -1106,30 +1153,60 @@
       lucide.createIcons();
     }
 
-    function populateEvaluationDropdowns() {
-      const campSelect = document.getElementById('evalCampSelect');
-      const staffSelect = document.getElementById('evalStaffSelect');
-      if (!campSelect || !staffSelect) return;
+    /* ================= EVALUATION WIZARD (AUTO-RESET ALWAYS!) ================= */
+    function openEvaluationModal(campId = null, staffId = null) {
+      // 1. Полный сброс слайдеров к дефолту
+      document.getElementById('slider_D').value = 4.0;
+      document.getElementById('slider_A').value = 4.0;
+      document.getElementById('slider_S').value = 4.5;
+      document.getElementById('slider_T').value = 4.0;
+      document.getElementById('slider_F').value = 4.0;
+      document.getElementById('slider_L').value = 4.0;
 
-      const currentCampVal = campSelect.value;
-      campSelect.innerHTML = campsList.map(c => `<option value="${c.id}">${c.name} (${c.location || 'База'})</option>`).join('');
-      if (currentCampVal && campsList.some(c => c.id === currentCampVal)) {
-        campSelect.value = currentCampVal;
-      }
+      // 2. Сброс бонусов и штрафов
+      document.getElementById('modSolo').checked = false;
+      document.getElementById('modHardAge').checked = false;
+      document.getElementById('modSaveCamp').checked = false;
+      document.getElementById('penLate').checked = false;
+      document.getElementById('penDisrupt').checked = false;
+      document.getElementById('stopFactor').checked = false;
+      document.getElementById('eval360Mode').checked = false;
 
-      onEvalCampChanged();
+      // 3. Выбор роли по умолчанию
+      document.getElementById('evalRoleSelect').value = 'counselor';
+
+      // 4. Заполнение селектов слётов и персонала
+      populateCampSelectDropdown();
+
+      if (campId) document.getElementById('evalCampSelect').value = campId;
+      onEvalCampSelectChanged();
+      if (staffId) document.getElementById('evalStaffSelect').value = staffId;
+
+      calculateWizardScore();
+      document.getElementById('evalModal').classList.remove('hidden');
+      lucide.createIcons();
     }
 
-    function onEvalCampChanged() {
-      const campSelect = document.getElementById('evalCampSelect');
-      const staffSelect = document.getElementById('evalStaffSelect');
-      if (!campSelect || !staffSelect) return;
+    function closeEvaluationModal() {
+      document.getElementById('evalModal').classList.add('hidden');
+    }
 
-      const campId = campSelect.value;
+    function populateCampSelectDropdown() {
+      const campSelect = document.getElementById('evalCampSelect');
+      if (!campSelect) return;
+      const current = campSelect.value;
+      campSelect.innerHTML = campsList.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+      if (current && campsList.some(c => c.id === current)) {
+        campSelect.value = current;
+      }
+    }
+
+    function onEvalCampSelectChanged() {
+      const campId = document.getElementById('evalCampSelect').value;
+      const staffSelect = document.getElementById('evalStaffSelect');
       const camp = campsList.find(c => c.id === campId);
       const roster = camp?.roster || [];
 
-      // Sort staff: roster members first
       let sorted = [...staffList].sort((a, b) => {
         const aIn = roster.includes(a.id) ? 0 : 1;
         const bIn = roster.includes(b.id) ? 0 : 1;
@@ -1140,18 +1217,14 @@
         const inBadge = roster.includes(s.id) ? '⭐ [В составе]' : '';
         return `<option value="${s.id}">${inBadge} ${s.name} ${s.nickname ? '('+s.nickname+')' : ''}</option>`;
       }).join('');
-    }
 
-    function quickEvaluate(staffId) {
-      switchTab('evaluation');
-      document.getElementById('evalStaffSelect').value = staffId;
       calculateWizardScore();
     }
 
     function calculateWizardScore() {
       const role = document.getElementById('evalRoleSelect').value;
       const roleInfo = ROLE_WEIGHTS[role] || ROLE_WEIGHTS.counselor;
-      document.getElementById('roleFormulaLabel').textContent = `Веса роли: ${roleInfo.label}`;
+      document.getElementById('roleFormulaLabel').textContent = roleInfo.label;
 
       const D = parseFloat(document.getElementById('slider_D').value);
       const A = parseFloat(document.getElementById('slider_A').value);
@@ -1171,7 +1244,7 @@
       if (isStop) {
         document.getElementById('wizardKResult').textContent = "0.00";
         const b = document.getElementById('wizardKBadge');
-        b.className = "text-xs px-2.5 py-1 rounded-full bg-rose-900/60 text-rose-300 font-semibold border border-rose-600";
+        b.className = "text-xs px-2.5 py-0.5 rounded-full bg-rose-900/80 text-rose-300 font-bold border border-rose-600";
         b.textContent = "СТОП-ЛИСТ (АННУЛИРОВАНО)";
         return;
       }
@@ -1196,13 +1269,13 @@
       const badge = document.getElementById('wizardKBadge');
 
       if (finalScore >= 4.3) {
-        badge.className = "text-xs px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/30";
+        badge.className = "text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/30";
         badge.textContent = "Золотой фонд";
       } else if (finalScore >= 3.6) {
-        badge.className = "text-xs px-2.5 py-1 rounded-full bg-indigo-500/20 text-indigo-300 font-semibold border border-indigo-500/30";
+        badge.className = "text-xs px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-semibold border border-indigo-500/30";
         badge.textContent = "Основа команды";
       } else {
-        badge.className = "text-xs px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-300 font-semibold border border-rose-500/30";
+        badge.className = "text-xs px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-semibold border border-rose-500/30";
         badge.textContent = "Зона риска";
       }
     }
@@ -1215,7 +1288,7 @@
       const isStop = document.getElementById('stopFactor').checked;
 
       if (!campId || !staffId) {
-        alert("Создайте слёт и добавьте сотрудника перед выставлением оценки.");
+        showToast("Выберите слёт и сотрудника!", "error");
         return;
       }
 
@@ -1236,7 +1309,7 @@
         timestamp: Date.now()
       };
 
-      // Also ensure staff member is added to camp roster automatically
+      // Ensure staff is in camp roster
       const camp = campsList.find(c => c.id === campId);
       if (camp && (!camp.roster || !camp.roster.includes(staffId))) {
         const updatedRoster = [...(camp.roster || []), staffId];
@@ -1244,13 +1317,14 @@
       }
 
       db.collection('evaluations').add(newEval).then(() => {
-        alert("Оценка успешно сохранена в базе Firebase!");
-        switchTab('registry');
+        showToast("Оценка успешно зафиксирована в базе!", "success");
+        closeEvaluationModal();
       }).catch(err => {
-        alert("Ошибка записи в базу: " + err.message);
+        showToast("Ошибка записи: " + err.message, "error");
       });
     }
 
+    /* ================= DOSSIER: MEMBER (FIXED SCROLL & CLOSE) ================= */
     function viewDossier(staffId) {
       const member = staffList.find(s => s.id === staffId);
       if (!member) return;
@@ -1260,6 +1334,7 @@
       document.getElementById('dosMeta').textContent = `Специализация: ${ROLE_WEIGHTS[member.primaryRole]?.label || member.primaryRole} • Контакт: ${member.contact || '—'}`;
 
       document.getElementById('dosPedK').textContent = m.pedK !== null ? m.pedK : '—';
+      document.getElementById('dosOrgK').textContent = m.orgK !== null ? m.orgK : '—';
       document.getElementById('dosTechK').textContent = m.techK !== null ? m.techK : '—';
       document.getElementById('dosTotalK').textContent = m.isStopListed ? '0.00' : (m.count > 0 ? m.overallK : '—');
 
@@ -1268,7 +1343,7 @@
         badge.textContent = "В СТОП-ЛИСТЕ";
         badge.className = "text-[10px] text-rose-400 font-bold";
       } else if (m.overallK >= 4.3) {
-        badge.textContent = "Ядро / Наставник";
+        badge.textContent = "Ядро / Золотой фонд";
         badge.className = "text-[10px] text-amber-400 font-bold";
       } else if (m.overallK >= 3.6) {
         badge.textContent = "Надёжная основа";
@@ -1278,22 +1353,23 @@
         badge.className = "text-[10px] text-rose-400 font-bold";
       }
 
+      // History
       const userEvals = evaluationsList.filter(e => e.staffId === staffId);
       const histDiv = document.getElementById('dosCampsHistory');
       histDiv.innerHTML = '';
       if (userEvals.length === 0) {
-        histDiv.innerHTML = '<div class="text-xs text-slate-500">Нет сохранённых оценок со слётов.</div>';
+        histDiv.innerHTML = '<div class="text-xs text-slate-500 p-3 bg-slate-900/40 rounded-lg border border-slate-800">Нет сохранённых оценок со слётов.</div>';
       } else {
         userEvals.forEach(ev => {
           const c = campsList.find(camp => camp.id === ev.campId) || { name: 'Слёт #' + ev.campId };
           const item = document.createElement('div');
-          item.className = 'flex items-center justify-between p-2 rounded-lg bg-slate-800 text-xs border border-slate-700/50';
+          item.className = 'flex items-center justify-between p-2.5 rounded-lg bg-slate-900/70 text-xs border border-slate-700/60';
           item.innerHTML = `
             <div>
               <div class="font-bold text-white">${c.name}</div>
-              <div class="text-slate-400">Роль: ${ROLE_WEIGHTS[ev.role]?.label || ev.role}</div>
+              <div class="text-slate-400">${ROLE_WEIGHTS[ev.role]?.label || ev.role}</div>
             </div>
-            <div class="font-extrabold text-sm ${ev.finalScore >= 4.3 ? 'text-amber-400' : (ev.finalScore >= 3.6 ? 'text-emerald-400' : 'text-rose-400')}">
+            <div class="font-black text-sm ${ev.finalScore >= 4.3 ? 'text-amber-400' : (ev.finalScore >= 3.6 ? 'text-emerald-400' : 'text-rose-400')}">
               K = ${ev.finalScore.toFixed(2)}
             </div>
           `;
@@ -1301,13 +1377,14 @@
         });
       }
 
+      // Debrief Script
       const scriptBox = document.getElementById('dosDebriefScript');
       if (m.isStopListed) {
-        scriptBox.innerHTML = `«Сотрудник дисквалифицирован за грубое нарушение техники безопасности или дисциплины слёта. Допуск на следующие смены закрыт.»`;
+        scriptBox.innerHTML = `«Сотрудник дисквалифицирован за критическое нарушение безопасности/дисциплины. Допуск на следующие смены закрыт.»`;
       } else if (m.count === 0) {
-        scriptBox.innerHTML = `«Новичок в штабе. Рекомендуется ставить в пару к опытному вожатому из "Золотого фонда" на первые 2–3 дня слёта.»`;
+        scriptBox.innerHTML = `«Новичок в штабе. Рекомендуется ставить в пару к опытному вожатому из "Золотого фонда" для адаптации.»`;
       } else {
-        scriptBox.innerHTML = `«Привет! Спасибо за смену. Твой накопительный коэффициент полезности — <b>${m.overallK}</b> (${badge.textContent}). Самая сильная компетенция — <b>${getStrongestVector(m.avgVectors)}</b>. Точка роста на следующий проект — <b>${getWeakestVector(m.avgVectors)}</b>.»`;
+        scriptBox.innerHTML = `«Привет! Спасибо за отдачу. Твой общий коэффициент — <b>${m.overallK}</b> (${badge.textContent}). Твоя ведущая суперсила — <b>${getStrongestVector(m.avgVectors)}</b>. На следующем слёте сделай акцент на <b>${getWeakestVector(m.avgVectors)}</b>.»`;
       }
 
       renderRadar(m.avgVectors);
@@ -1315,15 +1392,19 @@
       lucide.createIcons();
     }
 
+    function closeDossierModal() {
+      document.getElementById('dossierModal').classList.add('hidden');
+    }
+
     function getStrongestVector(v) {
-      const names = { D: 'дисциплина и тайминг', A: 'работа с аудиторией и детьми', S: 'бдительность по технике безопасности', T: 'командная выручка в штабе', F: 'стрессоустойчивость при ЧП', L: 'быстрая обучаемость' };
+      const names = { D: 'дисциплина и тайминг', A: 'работа с залом и детьми', S: 'техника безопасности', T: 'командная выручка', F: 'стрессоустойчивость', L: 'обучаемость' };
       let maxK = 'D';
       for (let k in v) { if (v[k] > v[maxK]) maxK = k; }
       return names[maxK];
     }
 
     function getWeakestVector(v) {
-      const names = { D: 'контроле дедлайнов и тайминга', A: 'вовлечении неактивных детей', S: 'соблюдении регламентов ТБ', T: 'коммуникации с напарником', F: 'реакции на форс-мажоры', L: 'исправлении замечаний куратора' };
+      const names = { D: 'контроле тайминга', A: 'вовлечении неактивных детей', S: 'бдительности по ТБ', T: 'коммуникации в штабе', F: 'реакции на форс-мажоры', L: 'исправлении правок' };
       let minK = 'D';
       for (let k in v) { if (v[k] < v[minK]) minK = k; }
       return names[minK];
@@ -1336,7 +1417,7 @@
       radarChartInstance = new Chart(ctx, {
         type: 'radar',
         data: {
-          labels: ['Дисциплина (D)', 'Коллектив (A)', 'Безопасность (S)', 'Командность (T)', 'Стресс (F)', 'Обучаемость (L)'],
+          labels: ['Дисциплина (D)', 'Аудитория (A)', 'Безопасность (S)', 'Командность (T)', 'Стресс (F)', 'Обучаемость (L)'],
           datasets: [{
             label: 'Профиль сотрудника',
             data: [v.D, v.A, v.S, v.T, v.F, v.L],
@@ -1371,24 +1452,471 @@
       });
     }
 
-    function closeDossierModal() {
-      document.getElementById('dossierModal').classList.add('hidden');
+    /* ================= DOSSIER: CAMP (NEW) ================= */
+    function viewCampDossier(campId) {
+      const camp = campsList.find(c => c.id === campId);
+      if (!camp) return;
+
+      document.getElementById('campDosTitle').innerHTML = `<i data-lucide="tent" class="text-indigo-400 w-5 h-5"></i> ${camp.name}`;
+      document.getElementById('campDosMeta').textContent = `Локация: ${camp.location || '—'} • Даты: ${camp.dates || '—'}`;
+
+      const roster = camp.roster || [];
+      const campEvals = evaluationsList.filter(e => e.campId === campId);
+      
+      document.getElementById('campDosRosterCount').textContent = roster.length;
+      
+      let avgK = '—';
+      let goldCount = 0;
+      const teamVectors = { D: 0, A: 0, S: 0, T: 0, F: 0, L: 0 };
+
+      if (campEvals.length > 0) {
+        const sum = campEvals.reduce((acc, curr) => acc + curr.finalScore, 0);
+        avgK = (sum / campEvals.length).toFixed(2);
+        goldCount = campEvals.filter(e => e.finalScore >= 4.3).length;
+
+        campEvals.forEach(ev => {
+          if (ev.vectors) {
+            for (let k in teamVectors) teamVectors[k] += (ev.vectors[k] || 4.0);
+          }
+        });
+        for (let k in teamVectors) teamVectors[k] = parseFloat((teamVectors[k] / campEvals.length).toFixed(1));
+      }
+
+      document.getElementById('campDosAvgK').textContent = avgK;
+      document.getElementById('campDosGoldCount').textContent = goldCount;
+
+      const evalPercent = roster.length > 0 ? Math.round((campEvals.length / roster.length) * 100) : 0;
+      document.getElementById('campDosEvaluatedPercent').textContent = evalPercent + '%';
+      document.getElementById('campDosEvaluatedCount').textContent = `${campEvals.length} из ${roster.length}`;
+      document.getElementById('campDosParticipantsBadge').textContent = `${campEvals.length} оценок`;
+
+      // Render participants list in camp dossier
+      const listDiv = document.getElementById('campDosParticipantsList');
+      listDiv.innerHTML = '';
+      if (roster.length === 0) {
+        listDiv.innerHTML = '<div class="text-xs text-slate-500 p-3 bg-slate-900/40 rounded-xl">В состав слёта ещё никто не включён.</div>';
+      } else {
+        roster.forEach(staffId => {
+          const staff = staffList.find(s => s.id === staffId);
+          if (!staff) return;
+          const ev = campEvals.find(e => e.staffId === staffId);
+          const item = document.createElement('div');
+          item.className = 'flex items-center justify-between p-2.5 rounded-xl bg-slate-900/70 border border-slate-700/60 text-xs';
+          
+          let scoreHtml = '';
+          if (ev) {
+            scoreHtml = `<span class="font-black text-sm ${ev.finalScore >= 4.3 ? 'text-amber-400' : (ev.finalScore >= 3.6 ? 'text-emerald-400' : 'text-rose-400')}">K = ${ev.finalScore.toFixed(2)}</span>`;
+          } else {
+            scoreHtml = `<button onclick="openEvaluationModal('${campId}', '${staffId}')" class="px-2.5 py-1 rounded bg-indigo-600/30 hover:bg-indigo-600 text-indigo-300 hover:text-white transition font-medium">Оценить</button>`;
+          }
+
+          item.innerHTML = `
+            <div>
+              <div class="font-bold text-white flex items-center gap-1.5">
+                ${staff.name} ${staff.nickname ? '«'+staff.nickname+'»' : ''}
+              </div>
+              <div class="text-[11px] text-slate-400">${ROLE_WEIGHTS[staff.primaryRole]?.label || staff.primaryRole}</div>
+            </div>
+            <div>${scoreHtml}</div>
+          `;
+          listDiv.appendChild(item);
+        });
+      }
+
+      // Render Team Radar Chart
+      renderCampRadar(teamVectors);
+      document.getElementById('campDossierModal').classList.remove('hidden');
+      lucide.createIcons();
     }
 
-    function exportCSV() {
-      let csv = 'ФИО,Позывной,Контакты,Слётов,Педагогический K,Технический K,Общий K-Индекс,Статус\n';
-      staffList.forEach(s => {
-        const m = calculateStaffMultiCampK(s.id);
-        const status = m.isStopListed ? 'Стоп-лист' : (m.overallK >= 4.3 ? 'Золотой фонд' : (m.overallK >= 3.6 ? 'Основа' : 'Зона риска'));
-        csv += `"${s.name}","${s.nickname || ''}","${s.contact || ''}",${m.count},${m.pedK || ''},${m.techK || ''},${m.overallK},"${status}"\n`;
-      });
+    function closeCampDossierModal() {
+      document.getElementById('campDossierModal').classList.add('hidden');
+    }
 
-      const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Реестр_CampMetrix_${new Date().toISOString().slice(0,10)}.csv`;
-      a.click();
+    function renderCampRadar(v) {
+      const ctx = document.getElementById('campRadarChart').getContext('2d');
+      if (campRadarChartInstance) campRadarChartInstance.destroy();
+
+      campRadarChartInstance = new Chart(ctx, {
+        type: 'radar',
+        data: {
+          labels: ['Дисциплина (D)', 'Аудитория (A)', 'Безопасность (S)', 'Командность (T)', 'Стресс (F)', 'Обучаемость (L)'],
+          datasets: [{
+            label: 'Средний профиль команды слёта',
+            data: [v.D, v.A, v.S, v.T, v.F, v.L],
+            backgroundColor: 'rgba(168, 85, 247, 0.25)',
+            borderColor: 'rgba(168, 85, 247, 1)',
+            pointBackgroundColor: '#a855f7',
+            borderWidth: 2
+          }, {
+            label: 'Эталон',
+            data: [4.0, 4.0, 4.5, 4.0, 4.0, 4.0],
+            borderColor: 'rgba(148, 163, 184, 0.35)',
+            borderDash: [4, 4],
+            pointRadius: 0,
+            fill: false
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            r: {
+              min: 1,
+              max: 5,
+              ticks: { stepSize: 1, display: false },
+              grid: { color: 'rgba(255, 255, 255, 0.1)' },
+              angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
+              pointLabels: { color: '#94a3b8', font: { size: 10 } }
+            }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+
+    /* ================= ROSTER MANAGEMENT ================= */
+    function openRosterModal(campId) {
+      activeRosterCampId = campId;
+      renderRosterModalContent(campId);
+      document.getElementById('rosterModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeRosterModal() {
+      activeRosterCampId = null;
+      document.getElementById('rosterModal').classList.add('hidden');
+    }
+
+    function renderRosterModalContent(campId) {
+      const camp = campsList.find(c => c.id === campId);
+      if (!camp) return;
+
+      document.getElementById('rosterCampTitle').innerHTML = `<i data-lucide="users" class="text-indigo-400 w-5 h-5"></i> ${camp.name}`;
+      document.getElementById('rosterCampMeta').textContent = `Локация: ${camp.location || '—'} • Даты: ${camp.dates || '—'}`;
+
+      const roster = camp.roster || [];
+      document.getElementById('rosterCountBadge').textContent = `${roster.length} человек`;
+
+      const select = document.getElementById('rosterAddStaffSelect');
+      const available = staffList.filter(s => !roster.includes(s.id));
+      if (available.length === 0) {
+        select.innerHTML = '<option value="" disabled selected>Все люди из реестра уже добавлены</option>';
+      } else {
+        select.innerHTML = '<option value="" disabled selected>Выберите человека из реестра...</option>' +
+          available.map(s => `<option value="${s.id}">${s.name} ${s.nickname ? '«'+s.nickname+'»' : ''}</option>`).join('');
+      }
+
+      const listContainer = document.getElementById('rosterStaffList');
+      listContainer.innerHTML = '';
+
+      if (roster.length === 0) {
+        listContainer.innerHTML = '<div class="p-6 text-center text-xs text-slate-500 bg-slate-900/40 rounded-xl">В этот слёт пока никто не записан.</div>';
+        return;
+      }
+
+      roster.forEach(staffId => {
+        const staff = staffList.find(s => s.id === staffId);
+        if (!staff) return;
+
+        const ev = evaluationsList.find(e => e.campId === campId && e.staffId === staffId);
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-900/60 border border-slate-700/60';
+
+        let evalBadge = '';
+        if (ev) {
+          evalBadge = `<span class="text-xs px-2 py-0.5 rounded font-black ${ev.finalScore >= 4.3 ? 'bg-amber-950/80 text-amber-300' : (ev.finalScore >= 3.6 ? 'bg-emerald-950/80 text-emerald-300' : 'bg-rose-950/80 text-rose-300')}">K = ${ev.finalScore.toFixed(2)}</span>`;
+        } else {
+          evalBadge = `<span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400">Ожидает</span>`;
+        }
+
+        item.innerHTML = `
+          <div>
+            <div class="font-bold text-xs sm:text-sm text-white">${staff.name}</div>
+            <div class="text-[11px] text-slate-400">${ROLE_WEIGHTS[staff.primaryRole]?.label || staff.primaryRole}</div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            ${evalBadge}
+            <button onclick="openEvaluationModal('${campId}', '${staff.id}')" class="p-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 transition" title="Оценить">
+              <i data-lucide="award" class="w-3.5 h-3.5"></i>
+            </button>
+            <button onclick="removeStaffFromRoster('${campId}', '${staff.id}')" class="p-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900 text-rose-400 border border-rose-800/40 transition" title="Убрать из слёта">
+              <i data-lucide="user-minus" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        `;
+        listContainer.appendChild(item);
+      });
+      lucide.createIcons();
+    }
+
+    function addSelectedStaffToRoster() {
+      if (!activeRosterCampId) return;
+      const select = document.getElementById('rosterAddStaffSelect');
+      const staffId = select.value;
+      if (!staffId) return;
+
+      const camp = campsList.find(c => c.id === activeRosterCampId);
+      if (!camp) return;
+
+      const current = camp.roster || [];
+      if (!current.includes(staffId)) {
+        const updated = [...current, staffId];
+        db.collection('camps').doc(activeRosterCampId).update({ roster: updated })
+          .then(() => showToast("Сотрудник добавлен в состав слёта", "success"))
+          .catch(err => showToast("Ошибка: " + err.message, "error"));
+      }
+    }
+
+    function removeStaffFromRoster(campId, staffId) {
+      const camp = campsList.find(c => c.id === campId);
+      const staff = staffList.find(s => s.id === staffId);
+      if (!camp || !staff) return;
+
+      showConfirmDialog({
+        title: "Исключить из слёта?",
+        message: `Убрать ${staff.name} из состава слёта "${camp.name}"?`,
+        confirmText: "Исключить",
+        onConfirm: () => {
+          const updated = (camp.roster || []).filter(id => id !== staffId);
+          db.collection('camps').doc(campId).update({ roster: updated })
+            .then(() => showToast("Сотрудник исключён из слёта", "info"))
+            .catch(err => showToast("Ошибка: " + err.message, "error"));
+        }
+      });
+    }
+
+    /* ================= CRUD STAFF ================= */
+    function openStaffModal(staffId = null) {
+      const modal = document.getElementById('staffModal');
+      const title = document.getElementById('staffModalTitle');
+      const submitBtn = document.getElementById('staffModalSubmitBtn');
+      const editInput = document.getElementById('staffEditId');
+
+      if (staffId) {
+        const member = staffList.find(s => s.id === staffId);
+        if (!member) return;
+        editInput.value = member.id;
+        document.getElementById('staffNameInput').value = member.name || '';
+        document.getElementById('staffNicknameInput').value = member.nickname || '';
+        document.getElementById('staffPrimaryRoleInput').value = member.primaryRole || 'counselor';
+        document.getElementById('staffContactInput').value = member.contact || '';
+        title.textContent = 'Редактировать сотрудника';
+        submitBtn.textContent = 'Обновить';
+      } else {
+        editInput.value = '';
+        document.getElementById('staffNameInput').value = '';
+        document.getElementById('staffNicknameInput').value = '';
+        document.getElementById('staffPrimaryRoleInput').value = 'counselor';
+        document.getElementById('staffContactInput').value = '';
+        title.textContent = 'Добавить сотрудника';
+        submitBtn.textContent = 'Сохранить';
+      }
+      modal.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeStaffModal() {
+      document.getElementById('staffModal').classList.add('hidden');
+    }
+
+    function handleStaffSubmit(e) {
+      e.preventDefault();
+      const editId = document.getElementById('staffEditId').value;
+      const data = {
+        name: document.getElementById('staffNameInput').value.trim(),
+        nickname: document.getElementById('staffNicknameInput').value.trim(),
+        primaryRole: document.getElementById('staffPrimaryRoleInput').value,
+        contact: document.getElementById('staffContactInput').value.trim()
+      };
+
+      if (editId) {
+        db.collection('staff').doc(editId).update(data).then(() => {
+          showToast("Данные сотрудника обновлены", "success");
+          closeStaffModal();
+        }).catch(err => showToast("Ошибка: " + err.message, "error"));
+      } else {
+        data.createdAt = Date.now();
+        db.collection('staff').add(data).then(() => {
+          showToast("Новый сотрудник добавлен в базу", "success");
+          closeStaffModal();
+        }).catch(err => showToast("Ошибка: " + err.message, "error"));
+      }
+    }
+
+    function deleteStaff(staffId) {
+      const member = staffList.find(s => s.id === staffId);
+      if (!member) return;
+
+      showConfirmDialog({
+        title: "Удалить сотрудника?",
+        message: `Вы действительно хотите удалить "${member.name}"? Все его оценки со слётов также будут стёрты.`,
+        confirmText: "Да, удалить",
+        onConfirm: () => {
+          db.collection('staff').doc(staffId).delete().then(() => {
+            evaluationsList.filter(e => e.staffId === staffId).forEach(ev => {
+              db.collection('evaluations').doc(ev.id).delete();
+            });
+            campsList.forEach(camp => {
+              if (camp.roster && camp.roster.includes(staffId)) {
+                const updated = camp.roster.filter(id => id !== staffId);
+                db.collection('camps').doc(camp.id).update({ roster: updated });
+              }
+            });
+            showToast("Сотрудник удалён из базы", "info");
+          }).catch(err => showToast("Ошибка удаления: " + err.message, "error"));
+        }
+      });
+    }
+
+    /* ================= CRUD CAMPS ================= */
+    function openCampModal(campId = null) {
+      const modal = document.getElementById('campModal');
+      const title = document.getElementById('campModalTitle');
+      const submitBtn = document.getElementById('campModalSubmitBtn');
+      const editInput = document.getElementById('campEditId');
+
+      if (campId) {
+        const camp = campsList.find(c => c.id === campId);
+        if (!camp) return;
+        editInput.value = camp.id;
+        document.getElementById('campNameInput').value = camp.name || '';
+        document.getElementById('campLocationInput').value = camp.location || '';
+        document.getElementById('campDatesInput').value = camp.dates || '';
+        title.textContent = 'Редактировать слёт';
+        submitBtn.textContent = 'Обновить';
+      } else {
+        editInput.value = '';
+        document.getElementById('campNameInput').value = '';
+        document.getElementById('campLocationInput').value = '';
+        document.getElementById('campDatesInput').value = '';
+        title.textContent = 'Создать новый слёт';
+        submitBtn.textContent = 'Создать слёт';
+      }
+      modal.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeCampModal() {
+      document.getElementById('campModal').classList.add('hidden');
+    }
+
+    function handleCampSubmit(e) {
+      e.preventDefault();
+      const editId = document.getElementById('campEditId').value;
+      const data = {
+        name: document.getElementById('campNameInput').value.trim(),
+        location: document.getElementById('campLocationInput').value.trim(),
+        dates: document.getElementById('campDatesInput').value.trim()
+      };
+
+      if (editId) {
+        db.collection('camps').doc(editId).update(data).then(() => {
+          showToast("Слёт успешно обновлён", "success");
+          closeCampModal();
+        }).catch(err => showToast("Ошибка: " + err.message, "error"));
+      } else {
+        data.roster = [];
+        data.createdAt = Date.now();
+        db.collection('camps').add(data).then(() => {
+          showToast("Новый слёт создан", "success");
+          closeCampModal();
+        }).catch(err => showToast("Ошибка: " + err.message, "error"));
+      }
+    }
+
+    function deleteCamp(campId) {
+      const camp = campsList.find(c => c.id === campId);
+      if (!camp) return;
+
+      showConfirmDialog({
+        title: "Удалить слёт?",
+        message: `Удалить слёт "${camp.name}"? Все выставленные на нём оценки будут аннулированы.`,
+        confirmText: "Да, удалить",
+        onConfirm: () => {
+          db.collection('camps').doc(campId).delete().then(() => {
+            evaluationsList.filter(e => e.campId === campId).forEach(ev => {
+              db.collection('evaluations').doc(ev.id).delete();
+            });
+            showToast("Слёт удалён", "info");
+          }).catch(err => showToast("Ошибка: " + err.message, "error"));
+        }
+      });
+    }
+
+    /* ================= SHEETJS REAL XLSX EXPORT ================= */
+    function exportXLSX() {
+      if (staffList.length === 0) {
+        showToast("Нет данных для экспорта", "error");
+        return;
+      }
+
+      const wb = XLSX.utils.book_new();
+
+      // Sheet 1: Staff Registry
+      const staffRows = staffList.map(s => {
+        const m = calculateStaffMultiCampK(s.id);
+        const badge = getCategoryBadge(m);
+        return {
+          "ФИО": s.name,
+          "Позывной": s.nickname || "",
+          "Специализация": ROLE_WEIGHTS[s.primaryRole]?.label || s.primaryRole,
+          "Контакты": s.contact || "",
+          "Слётов пройдено": m.count,
+          "Педагогический K": m.pedK !== null ? m.pedK : "",
+          "Организаторский K": m.orgK !== null ? m.orgK : "",
+          "Технический K": m.techK !== null ? m.techK : "",
+          "Итоговый K-индекс": m.isStopListed ? 0 : m.overallK,
+          "Тренд": m.trend,
+          "Статус в лагере": badge.label
+        };
+      });
+      const wsStaff = XLSX.utils.json_to_sheet(staffRows);
+      XLSX.utils.book_append_sheet(wb, wsStaff, "Реестр команды");
+
+      // Sheet 2: All Evaluations
+      const evalRows = evaluationsList.map(e => {
+        const staff = staffList.find(s => s.id === e.staffId);
+        const camp = campsList.find(c => c.id === e.campId);
+        return {
+          "Сотрудник": staff ? staff.name : e.staffId,
+          "Слёт / Смена": camp ? camp.name : e.campId,
+          "Локация": camp ? (camp.location || "") : "",
+          "Роль на смене": ROLE_WEIGHTS[e.role]?.label || e.role,
+          "Оценка за слёт (K)": e.finalScore,
+          "D (Дисциплина)": e.vectors?.D || "",
+          "A (Аудитория)": e.vectors?.A || "",
+          "S (Безопасность)": e.vectors?.S || "",
+          "T (Командность)": e.vectors?.T || "",
+          "F (Стресс)": e.vectors?.F || "",
+          "L (Обучаемость)": e.vectors?.L || "",
+          "Дата фиксации": e.timestamp ? new Date(e.timestamp).toLocaleDateString('ru-RU') : ""
+        };
+      });
+      const wsEvals = XLSX.utils.json_to_sheet(evalRows);
+      XLSX.utils.book_append_sheet(wb, wsEvals, "Оценки по слётам");
+
+      // Sheet 3: Camps Summary
+      const campRows = campsList.map(c => {
+        const rosterCount = (c.roster || []).length;
+        const campEvals = evaluationsList.filter(e => e.campId === c.id);
+        const avg = campEvals.length > 0 ? (campEvals.reduce((a, b) => a + b.finalScore, 0) / campEvals.length).toFixed(2) : "—";
+        return {
+          "Название слёта": c.name,
+          "Локация / База": c.location || "",
+          "Даты проведения": c.dates || "",
+          "Человек в составе": rosterCount,
+          "Оценено сотрудников": campEvals.length,
+          "Средний K команды": avg
+        };
+      });
+      const wsCamps = XLSX.utils.json_to_sheet(campRows);
+      XLSX.utils.book_append_sheet(wb, wsCamps, "Сводка слётов");
+
+      // Download file
+      const fileName = `CampMetrix_360_Export_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+      showToast("Отчёт успешно выгружен в Excel (.xlsx)!", "success");
     }
   </script>
 </body>
