@@ -41,9 +41,6 @@
   <!-- Floating Toast Notifications Container -->
   <div id="toastContainer" class="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none max-w-sm w-full px-3"></div>
 
-  <!-- Hidden vCard File Input for Fallback Contact Import -->
-  <input type="file" id="vcfFileInput" accept=".vcf,text/vcard" class="hidden" onchange="handleVcfUpload(event)">
-
   <!-- Header -->
   <header class="bg-slate-900/90 backdrop-blur border-b border-slate-800 sticky top-0 z-30 px-3 sm:px-4 py-3">
     <div class="max-w-7xl mx-auto flex items-center justify-between gap-2">
@@ -161,10 +158,10 @@
         </div>
       </div>
 
-      <!-- Mobile Cards -->
+      <!-- Mobile Cards (block md:hidden) -->
       <div id="staffCardsContainer" class="block md:hidden space-y-3"></div>
 
-      <!-- Desktop Table -->
+      <!-- Desktop Table (hidden md:block) -->
       <div class="hidden md:block bg-slate-800/70 border border-slate-700/60 rounded-xl overflow-hidden shadow-sm">
         <table class="w-full text-left text-sm whitespace-nowrap">
           <thead class="bg-slate-900/80 text-slate-400 border-b border-slate-700/60 uppercase text-[11px] font-semibold tracking-wider">
@@ -237,6 +234,7 @@
           <select id="step1StaffSelect" onchange="checkStep1EvaluationStatus()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-slate-100 focus:outline-none focus:border-indigo-500"></select>
         </div>
 
+        <!-- Dynamic Status Box -->
         <div id="step1StatusBox" class="p-3 rounded-xl border text-xs leading-relaxed transition-all"></div>
       </div>
 
@@ -278,6 +276,7 @@
       <div class="overflow-y-auto touch-scroll p-4 sm:p-6 space-y-4 sm:space-y-5 flex-1">
         <form id="evalWizardForm" onsubmit="saveEvaluation(event)" class="space-y-4 sm:space-y-5">
           
+          <!-- Camp and Person Summary Bar -->
           <div class="bg-slate-900/70 border border-slate-700/60 p-3 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs">
             <div class="flex items-center gap-2">
               <span class="text-slate-400">Слёт:</span>
@@ -426,6 +425,7 @@
             </div>
             
             <div class="flex items-center gap-2">
+              <!-- Delete evaluation button (only if existing evaluation) -->
               <button type="button" id="deleteCurrentEvalBtn" onclick="deleteCurrentEvaluationFromModal()" class="hidden px-3.5 py-2.5 bg-rose-950/70 hover:bg-rose-900 text-rose-300 border border-rose-800/60 rounded-xl font-bold transition flex items-center gap-1.5 text-xs sm:text-sm" title="Удалить оценку за этот слёт">
                 <i data-lucide="trash-2" class="w-4 h-4"></i>
                 <span class="hidden sm:inline">Удалить оценку</span>
@@ -609,7 +609,7 @@
     </div>
   </div>
 
-  <!-- MODAL: ADD / EDIT STAFF С ИНТЕГРАЦИЕЙ С ТЕЛЕФОННОЙ КНИГОЙ -->
+  <!-- MODAL: ADD / EDIT STAFF -->
   <div id="staffModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 hidden">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-xl">
       <div class="flex justify-between items-center border-b border-slate-700 pb-3">
@@ -638,22 +638,10 @@
             <option value="admin">Комендант / Техперсонал</option>
           </select>
         </div>
-        
-        <!-- Поле контактов с кнопкой подгрузки из адресной книги -->
         <div>
-          <div class="flex items-center justify-between mb-1">
-            <label class="block text-xs font-medium text-slate-300">Контакты (Телефон / Telegram)</label>
-            <button type="button" onclick="pickContactFromAddressBook()" class="px-2 py-0.5 rounded-md bg-indigo-600/30 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/40 text-[11px] font-semibold transition flex items-center gap-1">
-              <i data-lucide="contact" class="w-3.5 h-3.5"></i>
-              <span>Из контактов</span>
-            </button>
-          </div>
-          <div class="relative">
-            <input type="text" id="staffContactInput" placeholder="+7 (999) 000-00-00 или @username" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500">
-          </div>
-          <p class="text-[10px] text-slate-400 mt-1">Открывает телефонную книгу на смартфоне или файл vCard на ПК</p>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Контакты (Telegram / Телефон)</label>
+          <input type="text" id="staffContactInput" placeholder="@username" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500">
         </div>
-
         <div class="flex justify-end gap-2 pt-2 border-t border-slate-700">
           <button type="button" onclick="closeStaffModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-xs font-medium">Отмена</button>
           <button type="submit" id="staffModalSubmitBtn" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold">Сохранить</button>
@@ -730,6 +718,7 @@
     let campRadarChartInstance = null;
     let currentSort = 'k_desc';
 
+    // Current evaluation session state
     let evalSessionCampId = null;
     let evalSessionStaffId = null;
     let evalSessionExistingDocId = null;
@@ -748,83 +737,6 @@
       lucide.createIcons();
       initFirebase();
     });
-
-    /* ================= CONTACTS INTEGRATION (API + VCARD) ================= */
-    async function pickContactFromAddressBook() {
-      // 1. Попытка использовать нативный Web Contact Picker API (Android / Chrome)
-      if ('contacts' in navigator && 'ContactsManager' in window) {
-        try {
-          const props = ['name', 'tel'];
-          const contacts = await navigator.contacts.select(props, { multiple: false });
-          if (contacts && contacts.length > 0) {
-            const c = contacts[0];
-            const tel = c.tel && c.tel.length ? c.tel[0].trim() : '';
-            const name = c.name && c.name.length ? c.name[0].trim() : '';
-
-            if (tel) {
-              document.getElementById('staffContactInput').value = tel;
-            }
-            if (name && !document.getElementById('staffNameInput').value.trim()) {
-              document.getElementById('staffNameInput').value = name;
-            }
-
-            showToast(`Контакт «${name || tel}» успешно загружен!`, 'success');
-            return;
-          }
-        } catch (err) {
-          if (err.name === 'AbortError') {
-            return; // Пользователь закрыл выбор контакта
-          }
-          console.warn('Contact picker fallback to vCard:', err);
-        }
-      }
-
-      // 2. Универсальный fallback: импорт визитки vCard (.vcf)
-      showToast("Выберите контакт или файл .vcf с визиткой", "info");
-      document.getElementById('vcfFileInput').click();
-    }
-
-    function handleVcfUpload(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const text = e.target.result;
-        
-        // Поиск имени (FN: или N:)
-        const fnMatch = text.match(/FN(?:;[^:]*)?:(.*)/i);
-        const nMatch = text.match(/N(?:;[^:]*)?:(.*)/i);
-        
-        // Поиск телефона (TEL)
-        const telMatch = text.match(/TEL(?:;[^:]*)?:(.*)/i);
-
-        let name = '';
-        if (fnMatch && fnMatch[1]) {
-          name = fnMatch[1].trim();
-        } else if (nMatch && nMatch[1]) {
-          const parts = nMatch[1].split(';').map(p => p.trim()).filter(Boolean);
-          name = parts.join(' ');
-        }
-
-        let tel = telMatch ? telMatch[1].trim().replace(/[\r\n]/g, '') : '';
-
-        if (tel) {
-          document.getElementById('staffContactInput').value = tel;
-        }
-        if (name && !document.getElementById('staffNameInput').value.trim()) {
-          document.getElementById('staffNameInput').value = name;
-        }
-
-        if (tel || name) {
-          showToast(`Импортирован контакт: ${name || tel}`, 'success');
-        } else {
-          showToast('Не удалось распознать номер телефона в файле vCard', 'error');
-        }
-      };
-      reader.readAsText(file);
-      event.target.value = '';
-    }
 
     /* ================= TOAST NOTIFICATIONS & CONFIRM DIALOG ================= */
     function showToast(message, type = 'success') {
@@ -946,14 +858,18 @@
     }
 
     /* ================= ROBUST EVALUATION & K CALCULATION ================= */
+    
+    // Получение корректного списка актуальных оценок для конкретного слёта
     function getCampEvaluations(campId) {
       const camp = campsList.find(c => c.id === campId);
       const roster = camp?.roster || [];
       const evals = evaluationsList.filter(e => e.campId === campId);
 
+      // Дедупликация по сотруднику (на случай дублей оставляем самую свежую)
       const validMap = new Map();
       evals.forEach(ev => {
         const staffExists = staffList.some(s => s.id === ev.staffId);
+        // Если есть состав, учитываем только тех, кто в составе; если состава нет - проверяем факт существования человека
         const inRoster = roster.length === 0 || roster.includes(ev.staffId);
         if (staffExists && inRoster) {
           if (!validMap.has(ev.staffId) || (ev.timestamp || 0) > (validMap.get(ev.staffId).timestamp || 0)) {
@@ -964,12 +880,16 @@
       return Array.from(validMap.values());
     }
 
+    // Расчёт показателей K и отладка тренда для сотрудника
     function calculateStaffMultiCampK(staffId) {
+      // Находим все оценки сотрудника только по существующим слётам
       const rawEvals = evaluationsList.filter(e => e.staffId === staffId && campsList.some(c => c.id === e.campId));
 
+      // Дедупликация оценок по слёту (один слёт — ровно одна актуальная оценка)
       const campEvalMap = new Map();
       rawEvals.forEach(ev => {
         const camp = campsList.find(c => c.id === ev.campId);
+        // Проверяем, состоит ли человек в составе этого слёта (если состав ведется)
         const inRoster = !camp?.roster || camp.roster.length === 0 || camp.roster.includes(staffId);
         if (inRoster) {
           if (!campEvalMap.has(ev.campId) || (ev.timestamp || 0) > (campEvalMap.get(ev.campId).timestamp || 0)) {
@@ -993,6 +913,7 @@
         };
       }
 
+      // ХРОНОЛОГИЧЕСКАЯ СОРТИРОВКА: строго от старых к новым слётам
       evals.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
 
       let isStopListed = false;
@@ -1022,7 +943,7 @@
         let totalW = 0;
         let weightedSum = 0;
         scores.forEach((s, idx) => {
-          const w = 1.0 + (idx * 0.15);
+          const w = 1.0 + (idx * 0.15); // Более свежие смены имеют чуть больший вес
           weightedSum += s * w;
           totalW += w;
         });
@@ -1047,6 +968,7 @@
         overallK = totalW > 0 ? parseFloat((weightedSum / totalW).toFixed(2)) : 0;
       }
 
+      // ОТЛАЖЕННЫЙ ТРЕНД: точное сравнение последнего слёта с предпоследним
       let trend = '—';
       if (evals.length >= 2) {
         const latestScore = evals[evals.length - 1].finalScore;
@@ -1277,6 +1199,790 @@
       });
     }
 
+    /* ================= CAMPS LIST & METRICS ================= */
+    function renderCampsList() {
+      const container = document.getElementById('campsList');
+      container.innerHTML = '';
+
+      if (campsList.length === 0) {
+        document.getElementById('emptyCampsNotice').classList.remove('hidden');
+        return;
+      }
+      document.getElementById('emptyCampsNotice').classList.add('hidden');
+
+      campsList.forEach(c => {
+        const rosterCount = (c.roster || []).length;
+        // Точный расчет только живых и актуальных оценок
+        const campEvals = getCampEvaluations(c.id);
+        const evalsCount = campEvals.length;
+        
+        let avgScore = '—';
+        if (campEvals.length > 0) {
+          const sum = campEvals.reduce((acc, curr) => acc + curr.finalScore, 0);
+          avgScore = (sum / campEvals.length).toFixed(2);
+        }
+
+        const card = document.createElement('div');
+        card.className = 'bg-slate-800/80 border border-slate-700/60 p-4 rounded-xl flex flex-col justify-between gap-3 hover:border-slate-600 transition shadow-sm';
+        card.innerHTML = `
+          <div>
+            <div class="flex items-start justify-between gap-2">
+              <div class="font-bold text-white text-base">${c.name}</div>
+              <div class="flex items-center gap-1">
+                <button onclick="openCampModal('${c.id}')" class="p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition" title="Редактировать слёт">
+                  <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                </button>
+                <button onclick="deleteCamp('${c.id}')" class="p-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900 text-rose-400 border border-rose-800/40 transition" title="Удалить слёт">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </div>
+            <div class="text-xs text-slate-400 mt-1 flex flex-wrap gap-x-3 gap-y-1">
+              <span>📍 ${c.location || 'Локация не указана'}</span>
+              <span>📅 ${c.dates || 'Даты не указаны'}</span>
+            </div>
+            <div class="flex items-center gap-3 mt-3 pt-2.5 border-t border-slate-700/60 text-xs">
+              <span class="text-indigo-400 font-semibold flex items-center gap-1">
+                <i data-lucide="users" class="w-3.5 h-3.5"></i> В составе: ${rosterCount}
+              </span>
+              <span class="text-emerald-400 font-semibold flex items-center gap-1">
+                <i data-lucide="award" class="w-3.5 h-3.5"></i> Оценено: ${evalsCount}
+              </span>
+              <span class="text-amber-300 font-bold ml-auto">
+                Средний K: ${avgScore}
+              </span>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 pt-1">
+            <button onclick="openRosterModal('${c.id}')" class="flex-1 py-1.5 px-2 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 border border-indigo-500/30">
+              <i data-lucide="users" class="w-3.5 h-3.5"></i> Состав (${rosterCount})
+            </button>
+            <button onclick="viewCampDossier('${c.id}')" class="flex-1 py-1.5 px-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5">
+              <i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i> Досье слёта
+            </button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+      lucide.createIcons();
+    }
+
+    /* ================= 2-STEP EVALUATION WORKFLOW ================= */
+    
+    // STEP 1: Запуск диалога выбора слёта и человека
+    function startEvaluationFlow(campId = null, staffId = null) {
+      if (campsList.length === 0) {
+        showToast("Сначала создайте хотя бы один слёт!", "error");
+        return;
+      }
+      if (staffList.length === 0) {
+        showToast("Сначала добавьте хотя бы одного сотрудника в базу!", "error");
+        return;
+      }
+
+      const campSelect = document.getElementById('step1CampSelect');
+      const staffSelect = document.getElementById('step1StaffSelect');
+
+      campSelect.innerHTML = campsList.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+      if (campId && campsList.some(c => c.id === campId)) {
+        campSelect.value = campId;
+      }
+
+      staffSelect.innerHTML = staffList.map(s => {
+        return `<option value="${s.id}">${s.name} ${s.nickname ? '«'+s.nickname+'»' : ''} (${ROLE_WEIGHTS[s.primaryRole]?.label || s.primaryRole})</option>`;
+      }).join('');
+      if (staffId && staffList.some(s => s.id === staffId)) {
+        staffSelect.value = staffId;
+      }
+
+      checkStep1EvaluationStatus();
+      document.getElementById('evalSelectModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeEvalSelectModal() {
+      document.getElementById('evalSelectModal').classList.add('hidden');
+    }
+
+    function checkStep1EvaluationStatus() {
+      const campId = document.getElementById('step1CampSelect').value;
+      const staffId = document.getElementById('step1StaffSelect').value;
+      const statusBox = document.getElementById('step1StatusBox');
+      const proceedBtn = document.getElementById('step1ProceedBtn');
+
+      if (!campId || !staffId) {
+        statusBox.className = 'hidden';
+        return;
+      }
+
+      const existing = evaluationsList.find(e => e.campId === campId && e.staffId === staffId);
+      const camp = campsList.find(c => c.id === campId);
+      const staff = staffList.find(s => s.id === staffId);
+      const isEnrolledInRoster = camp?.roster && camp.roster.includes(staffId);
+
+      if (existing) {
+        statusBox.className = 'p-3 rounded-xl border border-amber-500/40 bg-amber-950/40 text-amber-200 text-xs leading-relaxed';
+        statusBox.innerHTML = `
+          <div class="font-bold flex items-center gap-1.5 text-amber-300">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i> Оценка уже существует (K = ${existing.finalScore.toFixed(2)})
+          </div>
+          <div class="mt-1 text-[11px] text-amber-200/80">
+            Для сотрудника <b>${staff?.name}</b> на этом слёте уже сохранены баллы. Они будут автоматически загружены в форму для редактирования.
+          </div>
+        `;
+        proceedBtn.innerHTML = `<span>Редактировать оценку</span> <i data-lucide="arrow-right" class="w-4 h-4"></i>`;
+      } else {
+        statusBox.className = 'p-3 rounded-xl border border-indigo-500/40 bg-indigo-950/40 text-indigo-200 text-xs leading-relaxed';
+        statusBox.innerHTML = `
+          <div class="font-bold flex items-center gap-1.5 text-indigo-300">
+            <i data-lucide="sparkles" class="w-4 h-4"></i> Новая оценка
+          </div>
+          <div class="mt-1 text-[11px] text-indigo-200/80">
+            Сотрудник <b>${staff?.name}</b> ещё не оценивался на слёте «${camp?.name}». Форма откроется со стандартными чистыми полями.
+            ${!isEnrolledInRoster ? '<br><span class="text-indigo-400 mt-1 inline-block">⭐ При оценке сотрудник автоматически добавится в состав слёта.</span>' : ''}
+          </div>
+        `;
+        proceedBtn.innerHTML = `<span>Далее к критериям</span> <i data-lucide="arrow-right" class="w-4 h-4"></i>`;
+      }
+      lucide.createIcons();
+    }
+
+    // STEP 2: Переход непосредственно к полям оценки
+    function proceedToEvaluationFields() {
+      evalSessionCampId = document.getElementById('step1CampSelect').value;
+      evalSessionStaffId = document.getElementById('step1StaffSelect').value;
+
+      if (!evalSessionCampId || !evalSessionStaffId) {
+        showToast("Укажите слёт и сотрудника!", "error");
+        return;
+      }
+
+      closeEvalSelectModal();
+
+      const camp = campsList.find(c => c.id === evalSessionCampId);
+      const staff = staffList.find(s => s.id === evalSessionStaffId);
+
+      document.getElementById('evalTargetCampName').textContent = camp ? camp.name : 'Слёт';
+      document.getElementById('evalTargetStaffName').textContent = staff ? staff.name : 'Сотрудник';
+      document.getElementById('evalModalHeaderSubtitle').textContent = `${camp?.name} • ${staff?.name}`;
+
+      const existing = evaluationsList.find(e => e.campId === evalSessionCampId && e.staffId === evalSessionStaffId);
+      const modeBadge = document.getElementById('evalModeBadge');
+      const submitBtn = document.getElementById('saveEvalSubmitBtn');
+      const deleteBtn = document.getElementById('deleteCurrentEvalBtn');
+
+      if (existing) {
+        // Подгрузка существующих данных
+        evalSessionExistingDocId = existing.id;
+        modeBadge.className = 'text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-amber-950 text-amber-300 border border-amber-500/50';
+        modeBadge.textContent = 'Обновление оценки';
+        document.getElementById('evalModalHeaderTitle').textContent = 'Редактирование оценки';
+        submitBtn.innerHTML = `<i data-lucide="refresh-cw" class="w-4 h-4"></i> Обновить оценку`;
+        deleteBtn.classList.remove('hidden');
+
+        document.getElementById('evalRoleSelect').value = existing.role || staff?.primaryRole || 'counselor';
+
+        const v = existing.vectors || { D: 4.0, A: 4.0, S: 4.5, T: 4.0, F: 4.0, L: 4.0 };
+        document.getElementById('slider_D').value = v.D ?? 4.0;
+        document.getElementById('slider_A').value = v.A ?? 4.0;
+        document.getElementById('slider_S').value = v.S ?? 4.5;
+        document.getElementById('slider_T').value = v.T ?? 4.0;
+        document.getElementById('slider_F').value = v.F ?? 4.0;
+        document.getElementById('slider_L').value = v.L ?? 4.0;
+
+        document.getElementById('modSolo').checked = !!existing.modifiers?.solo;
+        document.getElementById('modHardAge').checked = !!existing.modifiers?.hardAge;
+        document.getElementById('modSaveCamp').checked = !!existing.modifiers?.saveCamp;
+        document.getElementById('penLate').checked = !!existing.penalties?.late;
+        document.getElementById('penDisrupt').checked = !!existing.penalties?.disrupt;
+        document.getElementById('stopFactor').checked = !!existing.isStop;
+        document.getElementById('eval360Mode').checked = !!existing.is360;
+
+        showToast("Существующие оценки успешно подгружены", "info");
+      } else {
+        // Чистая форма со стандартными значениями
+        evalSessionExistingDocId = null;
+        modeBadge.className = 'text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-indigo-950 text-indigo-300 border border-indigo-500/50';
+        modeBadge.textContent = 'Новая оценка';
+        document.getElementById('evalModalHeaderTitle').textContent = 'Новая оценка';
+        submitBtn.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4"></i> Сохранить`;
+        deleteBtn.classList.add('hidden');
+
+        document.getElementById('evalRoleSelect').value = staff?.primaryRole || 'counselor';
+        document.getElementById('slider_D').value = 4.0;
+        document.getElementById('slider_A').value = 4.0;
+        document.getElementById('slider_S').value = 4.5;
+        document.getElementById('slider_T').value = 4.0;
+        document.getElementById('slider_F').value = 4.0;
+        document.getElementById('slider_L').value = 4.0;
+
+        document.getElementById('modSolo').checked = false;
+        document.getElementById('modHardAge').checked = false;
+        document.getElementById('modSaveCamp').checked = false;
+        document.getElementById('penLate').checked = false;
+        document.getElementById('penDisrupt').checked = false;
+        document.getElementById('stopFactor').checked = false;
+        document.getElementById('eval360Mode').checked = false;
+      }
+
+      calculateWizardScore();
+      document.getElementById('evalModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function backToStep1Selection() {
+      closeEvaluationModal();
+      startEvaluationFlow(evalSessionCampId, evalSessionStaffId);
+    }
+
+    function closeEvaluationModal() {
+      document.getElementById('evalModal').classList.add('hidden');
+    }
+
+    /* ================= ФУНКЦИЯ УДАЛЕНИЯ ОЦЕНКИ ================= */
+    function deleteEvaluation(evalId) {
+      if (!evalId) return;
+      showConfirmDialog({
+        title: "Удалить оценку?",
+        message: "Оценка за этот слёт будет удалена, а общий K и счётчик «Оценено» пересчитаны.",
+        confirmText: "Да, удалить",
+        onConfirm: () => {
+          db.collection('evaluations').doc(evalId).delete().then(() => {
+            showToast("Оценка успешно удалена", "info");
+            closeEvaluationModal();
+            updateAllViews();
+            if (activeRosterCampId) renderRosterModalContent(activeRosterCampId);
+          }).catch(err => {
+            showToast("Ошибка удаления: " + err.message, "error");
+          });
+        }
+      });
+    }
+
+    function deleteCurrentEvaluationFromModal() {
+      if (evalSessionExistingDocId) {
+        deleteEvaluation(evalSessionExistingDocId);
+      }
+    }
+
+    function calculateWizardScore() {
+      const role = document.getElementById('evalRoleSelect').value;
+      const roleInfo = ROLE_WEIGHTS[role] || ROLE_WEIGHTS.counselor;
+      document.getElementById('roleFormulaLabel').textContent = roleInfo.label;
+
+      const D = parseFloat(document.getElementById('slider_D').value);
+      const A = parseFloat(document.getElementById('slider_A').value);
+      const S = parseFloat(document.getElementById('slider_S').value);
+      const T = parseFloat(document.getElementById('slider_T').value);
+      const F = parseFloat(document.getElementById('slider_F').value);
+      const L = parseFloat(document.getElementById('slider_L').value);
+
+      document.getElementById('val_D').textContent = D.toFixed(1);
+      document.getElementById('val_A').textContent = A.toFixed(1);
+      document.getElementById('val_S').textContent = S.toFixed(1);
+      document.getElementById('val_T').textContent = T.toFixed(1);
+      document.getElementById('val_F').textContent = F.toFixed(1);
+      document.getElementById('val_L').textContent = L.toFixed(1);
+
+      const isStop = document.getElementById('stopFactor').checked;
+      if (isStop) {
+        document.getElementById('wizardKResult').textContent = "0.00";
+        const b = document.getElementById('wizardKBadge');
+        b.className = "text-xs px-2.5 py-0.5 rounded-full bg-rose-900/80 text-rose-300 font-bold border border-rose-600";
+        b.textContent = "СТОП-ЛИСТ (АННУЛИРОВАНО)";
+        return;
+      }
+
+      let baseScore = (D * roleInfo.D) + (A * roleInfo.A) + (S * roleInfo.S) + (T * roleInfo.T) + (F * roleInfo.F) + (L * roleInfo.L);
+
+      if (document.getElementById('eval360Mode').checked) {
+        baseScore = (baseScore * 0.45) + (baseScore * 1.02 * 0.30) + (baseScore * 0.98 * 0.25);
+      }
+
+      if (document.getElementById('modSolo').checked) baseScore += 0.30;
+      if (document.getElementById('modHardAge').checked) baseScore += 0.20;
+      if (document.getElementById('modSaveCamp').checked) baseScore += 0.20;
+
+      if (document.getElementById('penLate').checked) baseScore -= 0.30;
+      if (document.getElementById('penDisrupt').checked) baseScore -= 0.40;
+
+      baseScore = Math.max(1.0, Math.min(5.0, baseScore));
+      const finalScore = parseFloat(baseScore.toFixed(2));
+
+      document.getElementById('wizardKResult').textContent = finalScore.toFixed(2);
+      const badge = document.getElementById('wizardKBadge');
+
+      if (finalScore >= 4.3) {
+        badge.className = "text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/30";
+        badge.textContent = "Золотой фонд";
+      } else if (finalScore >= 3.6) {
+        badge.className = "text-xs px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-semibold border border-indigo-500/30";
+        badge.textContent = "Основа команды";
+      } else {
+        badge.className = "text-xs px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-semibold border border-rose-500/30";
+        badge.textContent = "Зона риска";
+      }
+    }
+
+    function saveEvaluation(e) {
+      e.preventDefault();
+      const campId = evalSessionCampId;
+      const staffId = evalSessionStaffId;
+      const role = document.getElementById('evalRoleSelect').value;
+      const isStop = document.getElementById('stopFactor').checked;
+
+      if (!campId || !staffId) {
+        showToast("Ошибка сессии оценки!", "error");
+        return;
+      }
+
+      const score = isStop ? 0 : parseFloat(document.getElementById('wizardKResult').textContent);
+      const evalData = {
+        staffId,
+        campId,
+        role,
+        finalScore: score,
+        vectors: {
+          D: parseFloat(document.getElementById('slider_D').value),
+          A: parseFloat(document.getElementById('slider_A').value),
+          S: parseFloat(document.getElementById('slider_S').value),
+          T: parseFloat(document.getElementById('slider_T').value),
+          F: parseFloat(document.getElementById('slider_F').value),
+          L: parseFloat(document.getElementById('slider_L').value)
+        },
+        modifiers: {
+          solo: document.getElementById('modSolo').checked,
+          hardAge: document.getElementById('modHardAge').checked,
+          saveCamp: document.getElementById('modSaveCamp').checked
+        },
+        penalties: {
+          late: document.getElementById('penLate').checked,
+          disrupt: document.getElementById('penDisrupt').checked
+        },
+        isStop,
+        is360: document.getElementById('eval360Mode').checked,
+        timestamp: Date.now()
+      };
+
+      // Проверяем, включен ли сотрудник в состав слёта
+      const camp = campsList.find(c => c.id === campId);
+      if (camp && (!camp.roster || !camp.roster.includes(staffId))) {
+        const updatedRoster = [...(camp.roster || []), staffId];
+        db.collection('camps').doc(campId).update({ roster: updatedRoster });
+      }
+
+      // Перепроверяем наличие существующего документа для предотвращения случайного дублирования
+      const existing = evaluationsList.find(ev => ev.campId === campId && ev.staffId === staffId);
+      const targetDocId = evalSessionExistingDocId || (existing ? existing.id : null);
+
+      if (targetDocId) {
+        db.collection('evaluations').doc(targetDocId).set(evalData, { merge: true }).then(() => {
+          showToast("Оценка сотрудника успешно обновлена!", "success");
+          closeEvaluationModal();
+        }).catch(err => {
+          showToast("Ошибка обновления: " + err.message, "error");
+        });
+      } else {
+        db.collection('evaluations').add(evalData).then(() => {
+          showToast("Новая оценка успешно сохранена в облаке!", "success");
+          closeEvaluationModal();
+        }).catch(err => {
+          showToast("Ошибка сохранения: " + err.message, "error");
+        });
+      }
+    }
+
+    /* ================= DOSSIER: MEMBER ================= */
+    function viewDossier(staffId) {
+      const member = staffList.find(s => s.id === staffId);
+      if (!member) return;
+
+      const m = calculateStaffMultiCampK(staffId);
+      document.getElementById('dosName').textContent = member.name + (member.nickname ? ` («${member.nickname}»)` : '');
+      document.getElementById('dosMeta').textContent = `Специализация: ${ROLE_WEIGHTS[member.primaryRole]?.label || member.primaryRole} • Контакт: ${member.contact || '—'}`;
+
+      document.getElementById('dosPedK').textContent = m.pedK !== null ? m.pedK : '—';
+      document.getElementById('dosOrgK').textContent = m.orgK !== null ? m.orgK : '—';
+      document.getElementById('dosTechK').textContent = m.techK !== null ? m.techK : '—';
+      document.getElementById('dosTotalK').textContent = m.isStopListed ? '0.00' : (m.count > 0 ? m.overallK : '—');
+
+      const badge = document.getElementById('dosCategoryBadge');
+      if (m.isStopListed) {
+        badge.textContent = "В СТОП-ЛИСТЕ";
+        badge.className = "text-[10px] text-rose-400 font-bold";
+      } else if (m.overallK >= 4.3) {
+        badge.textContent = "Ядро / Золотой фонд";
+        badge.className = "text-[10px] text-amber-400 font-bold";
+      } else if (m.overallK >= 3.6) {
+        badge.textContent = "Надёжная основа";
+        badge.className = "text-[10px] text-emerald-400 font-bold";
+      } else {
+        badge.textContent = "Зона риска";
+        badge.className = "text-[10px] text-rose-400 font-bold";
+      }
+
+      // История смен
+      const userEvals = evaluationsList.filter(e => e.staffId === staffId && campsList.some(c => c.id === e.campId));
+      userEvals.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+      const histDiv = document.getElementById('dosCampsHistory');
+      histDiv.innerHTML = '';
+      if (userEvals.length === 0) {
+        histDiv.innerHTML = '<div class="text-xs text-slate-500 p-3 bg-slate-900/40 rounded-lg border border-slate-800">Нет сохранённых оценок со слётов.</div>';
+      } else {
+        userEvals.forEach(ev => {
+          const c = campsList.find(camp => camp.id === ev.campId) || { name: 'Слёт #' + ev.campId };
+          const item = document.createElement('div');
+          item.className = 'flex items-center justify-between p-2.5 rounded-lg bg-slate-900/70 text-xs border border-slate-700/60';
+          item.innerHTML = `
+            <div>
+              <div class="font-bold text-white">${c.name}</div>
+              <div class="text-slate-400">${ROLE_WEIGHTS[ev.role]?.label || ev.role}</div>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="font-black text-sm ${ev.finalScore >= 4.3 ? 'text-amber-400' : (ev.finalScore >= 3.6 ? 'text-emerald-400' : 'text-rose-400')}">
+                K = ${ev.finalScore.toFixed(2)}
+              </span>
+              <button onclick="closeDossierModal(); startEvaluationFlow('${ev.campId}', '${staffId}');" class="p-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300" title="Изменить оценку">
+                <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+              </button>
+              <button onclick="deleteEvaluation('${ev.id}')" class="p-1 rounded bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800/40" title="Удалить оценку">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          `;
+          histDiv.appendChild(item);
+        });
+      }
+
+      // Debrief Script
+      const scriptBox = document.getElementById('dosDebriefScript');
+      if (m.isStopListed) {
+        scriptBox.innerHTML = `«Сотрудник дисквалифицирован за критическое нарушение безопасности/дисциплины. Допуск на следующие смены закрыт.»`;
+      } else if (m.count === 0) {
+        scriptBox.innerHTML = `«Новичок в штабе. Рекомендуется ставить в пару к опытному вожатому из "Золотого фонда" для адаптации.»`;
+      } else {
+        scriptBox.innerHTML = `«Привет! Спасибо за отдачу. Твой общий коэффициент — <b>${m.overallK}</b> (${badge.textContent}). Твоя ведущая суперсила — <b>${getStrongestVector(m.avgVectors)}</b>. На следующем слёте сделай акцент на <b>${getWeakestVector(m.avgVectors)}</b>.»`;
+      }
+
+      renderRadar(m.avgVectors);
+      document.getElementById('dossierModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeDossierModal() {
+      document.getElementById('dossierModal').classList.add('hidden');
+    }
+
+    function getStrongestVector(v) {
+      const names = { D: 'дисциплина и тайминг', A: 'работа с залом и детьми', S: 'техника безопасности', T: 'командная выручка', F: 'стрессоустойчивость', L: 'обучаемость' };
+      let maxK = 'D';
+      for (let k in v) { if (v[k] > v[maxK]) maxK = k; }
+      return names[maxK];
+    }
+
+    function getWeakestVector(v) {
+      const names = { D: 'контроле тайминга', A: 'вовлечении неактивных детей', S: 'бдительности по ТБ', T: 'коммуникации в штабе', F: 'реакции на форс-мажоры', L: 'исправлении правок' };
+      let minK = 'D';
+      for (let k in v) { if (v[k] < v[minK]) minK = k; }
+      return names[minK];
+    }
+
+    function renderRadar(v) {
+      const ctx = document.getElementById('radarChart').getContext('2d');
+      if (radarChartInstance) radarChartInstance.destroy();
+
+      radarChartInstance = new Chart(ctx, {
+        type: 'radar',
+        data: {
+          labels: ['Дисциплина (D)', 'Аудитория (A)', 'Безопасность (S)', 'Командность (T)', 'Стресс (F)', 'Обучаемость (L)'],
+          datasets: [{
+            label: 'Профиль сотрудника',
+            data: [v.D, v.A, v.S, v.T, v.F, v.L],
+            backgroundColor: 'rgba(99, 102, 241, 0.25)',
+            borderColor: 'rgba(99, 102, 241, 1)',
+            pointBackgroundColor: '#fbbf24',
+            borderWidth: 2
+          }, {
+            label: 'Эталон',
+            data: [4.0, 4.0, 4.5, 4.0, 4.0, 4.0],
+            borderColor: 'rgba(148, 163, 184, 0.35)',
+            borderDash: [4, 4],
+            pointRadius: 0,
+            fill: false
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            r: {
+              min: 1,
+              max: 5,
+              ticks: { stepSize: 1, display: false },
+              grid: { color: 'rgba(255, 255, 255, 0.1)' },
+              angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
+              pointLabels: { color: '#94a3b8', font: { size: 10 } }
+            }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+
+    /* ================= DOSSIER: CAMP ================= */
+    function viewCampDossier(campId) {
+      const camp = campsList.find(c => c.id === campId);
+      if (!camp) return;
+
+      document.getElementById('campDosTitle').innerHTML = `<i data-lucide="tent" class="text-indigo-400 w-5 h-5"></i> ${camp.name}`;
+      document.getElementById('campDosMeta').textContent = `Локация: ${camp.location || '—'} • Даты: ${camp.dates || '—'}`;
+
+      const roster = camp.roster || [];
+      const campEvals = getCampEvaluations(campId);
+      
+      document.getElementById('campDosRosterCount').textContent = roster.length;
+      
+      let avgK = '—';
+      let goldCount = 0;
+      const teamVectors = { D: 0, A: 0, S: 0, T: 0, F: 0, L: 0 };
+
+      if (campEvals.length > 0) {
+        const sum = campEvals.reduce((acc, curr) => acc + curr.finalScore, 0);
+        avgK = (sum / campEvals.length).toFixed(2);
+        goldCount = campEvals.filter(e => e.finalScore >= 4.3).length;
+
+        campEvals.forEach(ev => {
+          if (ev.vectors) {
+            for (let k in teamVectors) teamVectors[k] += (ev.vectors[k] || 4.0);
+          }
+        });
+        for (let k in teamVectors) teamVectors[k] = parseFloat((teamVectors[k] / campEvals.length).toFixed(1));
+      }
+
+      document.getElementById('campDosAvgK').textContent = avgK;
+      document.getElementById('campDosGoldCount').textContent = goldCount;
+
+      const evalPercent = roster.length > 0 ? Math.round((campEvals.length / roster.length) * 100) : 0;
+      document.getElementById('campDosEvaluatedPercent').textContent = evalPercent + '%';
+      document.getElementById('campDosEvaluatedCount').textContent = `${campEvals.length} из ${roster.length}`;
+      document.getElementById('campDosParticipantsBadge').textContent = `${campEvals.length} оценок`;
+
+      const listDiv = document.getElementById('campDosParticipantsList');
+      listDiv.innerHTML = '';
+      if (roster.length === 0) {
+        listDiv.innerHTML = '<div class="text-xs text-slate-500 p-3 bg-slate-900/40 rounded-xl">В состав слёта ещё никто не включён.</div>';
+      } else {
+        roster.forEach(staffId => {
+          const staff = staffList.find(s => s.id === staffId);
+          if (!staff) return;
+          const ev = campEvals.find(e => e.staffId === staffId);
+          const item = document.createElement('div');
+          item.className = 'flex items-center justify-between p-2.5 rounded-xl bg-slate-900/70 border border-slate-700/60 text-xs';
+          
+          let scoreHtml = '';
+          if (ev) {
+            scoreHtml = `
+              <div class="flex items-center gap-2">
+                <span class="font-black text-sm ${ev.finalScore >= 4.3 ? 'text-amber-400' : (ev.finalScore >= 3.6 ? 'text-emerald-400' : 'text-rose-400')}">K = ${ev.finalScore.toFixed(2)}</span>
+                <button onclick="closeCampDossierModal(); startEvaluationFlow('${campId}', '${staffId}');" class="p-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300" title="Изменить оценку">
+                  <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                </button>
+                <button onclick="deleteEvaluation('${ev.id}')" class="p-1 rounded bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800/40" title="Удалить оценку">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            `;
+          } else {
+            scoreHtml = `<button onclick="closeCampDossierModal(); startEvaluationFlow('${campId}', '${staffId}');" class="px-2.5 py-1 rounded bg-indigo-600/30 hover:bg-indigo-600 text-indigo-300 hover:text-white transition font-medium">Оценить</button>`;
+          }
+
+          item.innerHTML = `
+            <div>
+              <div class="font-bold text-white flex items-center gap-1.5">
+                ${staff.name} ${staff.nickname ? '«'+staff.nickname+'»' : ''}
+              </div>
+              <div class="text-[11px] text-slate-400">${ROLE_WEIGHTS[staff.primaryRole]?.label || staff.primaryRole}</div>
+            </div>
+            <div>${scoreHtml}</div>
+          `;
+          listDiv.appendChild(item);
+        });
+      }
+
+      renderCampRadar(teamVectors);
+      document.getElementById('campDossierModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeCampDossierModal() {
+      document.getElementById('campDossierModal').classList.add('hidden');
+    }
+
+    function renderCampRadar(v) {
+      const ctx = document.getElementById('campRadarChart').getContext('2d');
+      if (campRadarChartInstance) campRadarChartInstance.destroy();
+
+      campRadarChartInstance = new Chart(ctx, {
+        type: 'radar',
+        data: {
+          labels: ['Дисциплина (D)', 'Аудитория (A)', 'Безопасность (S)', 'Командность (T)', 'Стресс (F)', 'Обучаемость (L)'],
+          datasets: [{
+            label: 'Средний профиль команды слёта',
+            data: [v.D, v.A, v.S, v.T, v.F, v.L],
+            backgroundColor: 'rgba(168, 85, 247, 0.25)',
+            borderColor: 'rgba(168, 85, 247, 1)',
+            pointBackgroundColor: '#a855f7',
+            borderWidth: 2
+          }, {
+            label: 'Эталон',
+            data: [4.0, 4.0, 4.5, 4.0, 4.0, 4.0],
+            borderColor: 'rgba(148, 163, 184, 0.35)',
+            borderDash: [4, 4],
+            pointRadius: 0,
+            fill: false
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            r: {
+              min: 1,
+              max: 5,
+              ticks: { stepSize: 1, display: false },
+              grid: { color: 'rgba(255, 255, 255, 0.1)' },
+              angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
+              pointLabels: { color: '#94a3b8', font: { size: 10 } }
+            }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+
+    /* ================= ROSTER MANAGEMENT ================= */
+    function openRosterModal(campId) {
+      activeRosterCampId = campId;
+      renderRosterModalContent(campId);
+      document.getElementById('rosterModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeRosterModal() {
+      activeRosterCampId = null;
+      document.getElementById('rosterModal').classList.add('hidden');
+    }
+
+    function renderRosterModalContent(campId) {
+      const camp = campsList.find(c => c.id === campId);
+      if (!camp) return;
+
+      document.getElementById('rosterCampTitle').innerHTML = `<i data-lucide="users" class="text-indigo-400 w-5 h-5"></i> ${camp.name}`;
+      document.getElementById('rosterCampMeta').textContent = `Локация: ${camp.location || '—'} • Даты: ${camp.dates || '—'}`;
+
+      const roster = camp.roster || [];
+      document.getElementById('rosterCountBadge').textContent = `${roster.length} человек`;
+
+      const select = document.getElementById('rosterAddStaffSelect');
+      const available = staffList.filter(s => !roster.includes(s.id));
+      if (available.length === 0) {
+        select.innerHTML = '<option value="" disabled selected>Все люди из реестра уже добавлены</option>';
+      } else {
+        select.innerHTML = '<option value="" disabled selected>Выберите человека из реестра...</option>' +
+          available.map(s => `<option value="${s.id}">${s.name} ${s.nickname ? '«'+s.nickname+'»' : ''}</option>`).join('');
+      }
+
+      const listContainer = document.getElementById('rosterStaffList');
+      listContainer.innerHTML = '';
+
+      if (roster.length === 0) {
+        listContainer.innerHTML = '<div class="p-6 text-center text-xs text-slate-500 bg-slate-900/40 rounded-xl">В этот слёт пока никто не записан.</div>';
+        return;
+      }
+
+      roster.forEach(staffId => {
+        const staff = staffList.find(s => s.id === staffId);
+        if (!staff) return;
+
+        const ev = evaluationsList.find(e => e.campId === campId && e.staffId === staffId);
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-900/60 border border-slate-700/60';
+
+        let evalBadge = '';
+        if (ev) {
+          evalBadge = `<span class="text-xs px-2 py-0.5 rounded font-black ${ev.finalScore >= 4.3 ? 'bg-amber-950/80 text-amber-300' : (ev.finalScore >= 3.6 ? 'bg-emerald-950/80 text-emerald-300' : 'bg-rose-950/80 text-rose-300')}">K = ${ev.finalScore.toFixed(2)}</span>`;
+        } else {
+          evalBadge = `<span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400">Ожидает</span>`;
+        }
+
+        item.innerHTML = `
+          <div>
+            <div class="font-bold text-xs sm:text-sm text-white">${staff.name}</div>
+            <div class="text-[11px] text-slate-400">${ROLE_WEIGHTS[staff.primaryRole]?.label || staff.primaryRole}</div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            ${evalBadge}
+            <button onclick="closeRosterModal(); startEvaluationFlow('${campId}', '${staff.id}');" class="p-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 transition" title="Оценить / Изменить">
+              <i data-lucide="award" class="w-3.5 h-3.5"></i>
+            </button>
+            ${ev ? `
+              <button onclick="deleteEvaluation('${ev.id}')" class="p-1.5 rounded-lg bg-amber-950/40 hover:bg-amber-900 text-amber-300 border border-amber-800/40 transition" title="Сбросить оценку за слёт">
+                <i data-lucide="eraser" class="w-3.5 h-3.5"></i>
+              </button>
+            ` : ''}
+            <button onclick="removeStaffFromRoster('${campId}', '${staff.id}')" class="p-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900 text-rose-400 border border-rose-800/40 transition" title="Убрать из слёта">
+              <i data-lucide="user-minus" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        `;
+        listContainer.appendChild(item);
+      });
+      lucide.createIcons();
+    }
+
+    function addSelectedStaffToRoster() {
+      if (!activeRosterCampId) return;
+      const select = document.getElementById('rosterAddStaffSelect');
+      const staffId = select.value;
+      if (!staffId) return;
+
+      const camp = campsList.find(c => c.id === activeRosterCampId);
+      if (!camp) return;
+
+      const current = camp.roster || [];
+      if (!current.includes(staffId)) {
+        const updated = [...current, staffId];
+        db.collection('camps').doc(activeRosterCampId).update({ roster: updated })
+          .then(() => showToast("Сотрудник добавлен в состав слёта", "success"))
+          .catch(err => showToast("Ошибка: " + err.message, "error"));
+      }
+    }
+
+    // При исключении сотрудника из слёта удаляются и все его оценки за этот слёт
+    function removeStaffFromRoster(campId, staffId) {
+      const camp = campsList.find(c => c.id === campId);
+      const staff = staffList.find(s => s.id === staffId);
+      if (!camp || !staff) return;
+
+      showConfirmDialog({
+        title: "Исключить из слёта?",
+        message: `Убрать ${staff.name} из состава слёта "${camp.name}"? Оценки этого сотрудника за данный слёт также будут аннулированы.`,
+        confirmText: "Исключить",
+        onConfirm: () => {
+          const updated = (camp.roster || []).filter(id => id !== staffId);
+          db.collection('camps').doc(campId).update({ roster: updated }).then(() => {
+            // Удаляем оценку по этому слёту, чтобы счётчик Оценено корректно уменьшился
+            const evalsToDelete = evaluationsList.filter(e => e.campId === campId && e.staffId === staffId);
+            evalsToDelete.forEach(ev => {
+              db.collection('evaluations').doc(ev.id).delete();
+            });
+            showToast("Сотрудник исключён из слёта, оценка аннулирована", "info");
+          }).catch(err => showToast("Ошибка: " + err.message, "error"));
+        }
+      });
+    }
+
     /* ================= CRUD STAFF ================= */
     function openStaffModal(staffId = null) {
       const modal = document.getElementById('staffModal');
@@ -1444,6 +2150,7 @@
 
       const wb = XLSX.utils.book_new();
 
+      // Sheet 1: Staff Registry
       const staffRows = staffList.map(s => {
         const m = calculateStaffMultiCampK(s.id);
         const badge = getCategoryBadge(m);
@@ -1464,6 +2171,7 @@
       const wsStaff = XLSX.utils.json_to_sheet(staffRows);
       XLSX.utils.book_append_sheet(wb, wsStaff, "Реестр команды");
 
+      // Sheet 2: All Evaluations
       const evalRows = evaluationsList.map(e => {
         const staff = staffList.find(s => s.id === e.staffId);
         const camp = campsList.find(c => c.id === e.campId);
@@ -1485,6 +2193,7 @@
       const wsEvals = XLSX.utils.json_to_sheet(evalRows);
       XLSX.utils.book_append_sheet(wb, wsEvals, "Оценки по слётам");
 
+      // Sheet 3: Camps Summary
       const campRows = campsList.map(c => {
         const rosterCount = (c.roster || []).length;
         const campEvals = getCampEvaluations(c.id);
