@@ -158,10 +158,10 @@
         </div>
       </div>
 
-      <!-- Mobile Cards (block md:hidden) -->
+      <!-- Mobile Cards -->
       <div id="staffCardsContainer" class="block md:hidden space-y-3"></div>
 
-      <!-- Desktop Table (hidden md:block) -->
+      <!-- Desktop Table -->
       <div class="hidden md:block bg-slate-800/70 border border-slate-700/60 rounded-xl overflow-hidden shadow-sm">
         <table class="w-full text-left text-sm whitespace-nowrap">
           <thead class="bg-slate-900/80 text-slate-400 border-b border-slate-700/60 uppercase text-[11px] font-semibold tracking-wider">
@@ -211,7 +211,7 @@
 
   <!-- ==================== MODALS ==================== -->
 
-  <!-- MODAL: STEP 1 OF EVALUATION (ВЫБОР СЛЁТА И ЧЕЛОВЕКА) -->
+  <!-- MODAL: STEP 1 OF EVALUATION -->
   <div id="evalSelectModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 hidden">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-2xl">
       <div class="flex justify-between items-center border-b border-slate-700 pb-3">
@@ -248,7 +248,7 @@
     </div>
   </div>
 
-  <!-- MODAL: STEP 2 OF EVALUATION (ПОЛЯ И КРИТЕРИИ ОЦЕНКИ С КНОПКОЙ УДАЛЕНИЯ) -->
+  <!-- MODAL: STEP 2 OF EVALUATION -->
   <div id="evalModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 hidden">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-3xl w-full flex flex-col max-h-[94vh] shadow-2xl overflow-hidden">
       <!-- Fixed Sticky Header -->
@@ -276,7 +276,6 @@
       <div class="overflow-y-auto touch-scroll p-4 sm:p-6 space-y-4 sm:space-y-5 flex-1">
         <form id="evalWizardForm" onsubmit="saveEvaluation(event)" class="space-y-4 sm:space-y-5">
           
-          <!-- Camp and Person Summary Bar -->
           <div class="bg-slate-900/70 border border-slate-700/60 p-3 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs">
             <div class="flex items-center gap-2">
               <span class="text-slate-400">Слёт:</span>
@@ -305,7 +304,6 @@
             </div>
           </div>
 
-          <!-- Mode 360 toggle -->
           <div class="flex items-center justify-between p-3 rounded-xl bg-indigo-950/40 border border-indigo-500/30">
             <div class="flex items-center gap-2.5">
               <i data-lucide="layers" class="text-indigo-400 w-5 h-5 flex-shrink-0"></i>
@@ -425,7 +423,6 @@
             </div>
             
             <div class="flex items-center gap-2">
-              <!-- Delete evaluation button (only if existing evaluation) -->
               <button type="button" id="deleteCurrentEvalBtn" onclick="deleteCurrentEvaluationFromModal()" class="hidden px-3.5 py-2.5 bg-rose-950/70 hover:bg-rose-900 text-rose-300 border border-rose-800/60 rounded-xl font-bold transition flex items-center gap-1.5 text-xs sm:text-sm" title="Удалить оценку за этот слёт">
                 <i data-lucide="trash-2" class="w-4 h-4"></i>
                 <span class="hidden sm:inline">Удалить оценку</span>
@@ -609,18 +606,33 @@
     </div>
   </div>
 
-  <!-- MODAL: ADD / EDIT STAFF -->
+  <!-- MODAL: ADD / EDIT STAFF (С ИНТЕГРАЦИЕЙ С АДРЕСНОЙ КНИГОЙ И SAFARI) -->
   <div id="staffModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 hidden">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-xl">
       <div class="flex justify-between items-center border-b border-slate-700 pb-3">
         <h3 class="text-base sm:text-lg font-bold text-white" id="staffModalTitle">Добавить сотрудника</h3>
         <button onclick="closeStaffModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
+
+      <!-- Кнопка импорта из адресной книги устройства (Contact Picker / Safari vCard) -->
+      <div class="bg-indigo-950/40 border border-indigo-500/30 rounded-xl p-2.5 flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2 text-xs text-indigo-200">
+          <i data-lucide="contact" class="w-4 h-4 text-indigo-400 flex-shrink-0"></i>
+          <span>Заполнить из записной книжки</span>
+        </div>
+        <button type="button" onclick="pickFromContacts()" class="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+          <i data-lucide="phone-call" class="w-3.5 h-3.5"></i>
+          <span>Выбрать</span>
+        </button>
+        <!-- Скрытый инпут для vCard (.vcf) fallback для Safari / iOS -->
+        <input type="file" id="vcfContactInput" accept=".vcf,text/vcard,text/x-vcard" class="hidden" onchange="handleVcfFileSelected(event)">
+      </div>
+
       <form onsubmit="handleStaffSubmit(event)" class="space-y-3.5">
         <input type="hidden" id="staffEditId" value="">
         <div>
           <label class="block text-xs font-medium text-slate-300 mb-1">ФИО *</label>
-          <input type="text" id="staffNameInput" required placeholder="Иванов Алексей" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500">
+          <input type="text" id="staffNameInput" name="name" autocomplete="name" required placeholder="Иванов Алексей" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500">
         </div>
         <div>
           <label class="block text-xs font-medium text-slate-300 mb-1">Вожатский позывной / никнейм</label>
@@ -639,8 +651,9 @@
           </select>
         </div>
         <div>
-          <label class="block text-xs font-medium text-slate-300 mb-1">Контакты (Telegram / Телефон)</label>
-          <input type="text" id="staffContactInput" placeholder="@username" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500">
+          <label class="block text-xs font-medium text-slate-300 mb-1">Телефон / Контакт</label>
+          <input type="tel" id="staffContactInput" name="tel" autocomplete="tel" placeholder="+7 999 123-45-67 или @username" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500">
+          <p class="text-[10px] text-slate-500 mt-1">В Safari нажмите на поле — над клавиатурой появится кнопка «Контакты»</p>
         </div>
         <div class="flex justify-end gap-2 pt-2 border-t border-slate-700">
           <button type="button" onclick="closeStaffModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-xs font-medium">Отмена</button>
@@ -789,6 +802,85 @@
       document.getElementById('confirmModal').classList.add('hidden');
     }
 
+    /* ================= CONTACT PICKER & SAFARI INTEGRATION ================= */
+    async function pickFromContacts() {
+      // 1. Android / Chrome нативный Contact Picker API
+      if ('contacts' in navigator && 'ContactsManager' in window) {
+        try {
+          const props = ['name', 'tel'];
+          const contacts = await navigator.contacts.select(props, { multiple: false });
+          if (contacts && contacts.length > 0) {
+            const c = contacts[0];
+            if (c.name && c.name.length > 0 && !document.getElementById('staffNameInput').value.trim()) {
+              document.getElementById('staffNameInput').value = c.name[0];
+            }
+            if (c.tel && c.tel.length > 0) {
+              document.getElementById('staffContactInput').value = c.tel[0];
+            }
+            showToast("Контакт успешно загружен из телефонной книги!", "success");
+            return;
+          }
+        } catch (err) {
+          console.warn("Contact picker closed or failed:", err);
+        }
+      }
+
+      // 2. Safari / iOS & Desktop fallback: открытие диалога vCard (.vcf)
+      // В Safari Apple блокирует прямой доступ скрипта к книжке, но поддерживает импорт vCard и автозаполнение QuickType
+      showToast("В Safari: выберите карточку (.vcf) или нажмите на поле телефона для подсказки клавиатуры", "info");
+      document.getElementById('vcfContactInput').click();
+    }
+
+    // Обработка vCard файла, выбранного пользователем в Safari / других браузерах
+    function handleVcfFileSelected(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const text = e.target.result;
+        const parsed = parseVcfContact(text);
+        
+        let filledCount = 0;
+        if (parsed.name && !document.getElementById('staffNameInput').value.trim()) {
+          document.getElementById('staffNameInput').value = parsed.name;
+          filledCount++;
+        }
+        if (parsed.tel) {
+          document.getElementById('staffContactInput').value = parsed.tel;
+          filledCount++;
+        }
+
+        if (filledCount > 0) {
+          showToast(`Контакт успешно импортирован (${parsed.name || parsed.tel})`, "success");
+        } else {
+          showToast("Не удалось извлечь имя или номер из файла vCard", "error");
+        }
+        event.target.value = ''; // сброс
+      };
+      reader.readAsText(file);
+    }
+
+    // Простой и надежный парсер vCard 2.1 / 3.0 / 4.0
+    function parseVcfContact(vcfText) {
+      let name = '';
+      let tel = '';
+      const lines = vcfText.split(/\r\n|\r|\n/);
+
+      for (let line of lines) {
+        line = line.trim();
+        // Имя
+        if (!name && (line.startsWith('FN:') || line.startsWith('FN;'))) {
+          name = line.substring(line.indexOf(':') + 1).trim();
+        }
+        // Телефон
+        if (!tel && line.startsWith('TEL')) {
+          tel = line.substring(line.indexOf(':') + 1).trim();
+        }
+      }
+      return { name, tel };
+    }
+
     /* ================= FIREBASE INIT ================= */
     function initFirebase() {
       try {
@@ -858,18 +950,14 @@
     }
 
     /* ================= ROBUST EVALUATION & K CALCULATION ================= */
-    
-    // Получение корректного списка актуальных оценок для конкретного слёта
     function getCampEvaluations(campId) {
       const camp = campsList.find(c => c.id === campId);
       const roster = camp?.roster || [];
       const evals = evaluationsList.filter(e => e.campId === campId);
 
-      // Дедупликация по сотруднику (на случай дублей оставляем самую свежую)
       const validMap = new Map();
       evals.forEach(ev => {
         const staffExists = staffList.some(s => s.id === ev.staffId);
-        // Если есть состав, учитываем только тех, кто в составе; если состава нет - проверяем факт существования человека
         const inRoster = roster.length === 0 || roster.includes(ev.staffId);
         if (staffExists && inRoster) {
           if (!validMap.has(ev.staffId) || (ev.timestamp || 0) > (validMap.get(ev.staffId).timestamp || 0)) {
@@ -880,16 +968,12 @@
       return Array.from(validMap.values());
     }
 
-    // Расчёт показателей K и отладка тренда для сотрудника
     function calculateStaffMultiCampK(staffId) {
-      // Находим все оценки сотрудника только по существующим слётам
       const rawEvals = evaluationsList.filter(e => e.staffId === staffId && campsList.some(c => c.id === e.campId));
 
-      // Дедупликация оценок по слёту (один слёт — ровно одна актуальная оценка)
       const campEvalMap = new Map();
       rawEvals.forEach(ev => {
         const camp = campsList.find(c => c.id === ev.campId);
-        // Проверяем, состоит ли человек в составе этого слёта (если состав ведется)
         const inRoster = !camp?.roster || camp.roster.length === 0 || camp.roster.includes(staffId);
         if (inRoster) {
           if (!campEvalMap.has(ev.campId) || (ev.timestamp || 0) > (campEvalMap.get(ev.campId).timestamp || 0)) {
@@ -913,7 +997,6 @@
         };
       }
 
-      // ХРОНОЛОГИЧЕСКАЯ СОРТИРОВКА: строго от старых к новым слётам
       evals.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
 
       let isStopListed = false;
@@ -943,7 +1026,7 @@
         let totalW = 0;
         let weightedSum = 0;
         scores.forEach((s, idx) => {
-          const w = 1.0 + (idx * 0.15); // Более свежие смены имеют чуть больший вес
+          const w = 1.0 + (idx * 0.15);
           weightedSum += s * w;
           totalW += w;
         });
@@ -968,7 +1051,6 @@
         overallK = totalW > 0 ? parseFloat((weightedSum / totalW).toFixed(2)) : 0;
       }
 
-      // ОТЛАЖЕННЫЙ ТРЕНД: точное сравнение последнего слёта с предпоследним
       let trend = '—';
       if (evals.length >= 2) {
         const latestScore = evals[evals.length - 1].finalScore;
@@ -1199,77 +1281,7 @@
       });
     }
 
-    /* ================= CAMPS LIST & METRICS ================= */
-    function renderCampsList() {
-      const container = document.getElementById('campsList');
-      container.innerHTML = '';
-
-      if (campsList.length === 0) {
-        document.getElementById('emptyCampsNotice').classList.remove('hidden');
-        return;
-      }
-      document.getElementById('emptyCampsNotice').classList.add('hidden');
-
-      campsList.forEach(c => {
-        const rosterCount = (c.roster || []).length;
-        // Точный расчет только живых и актуальных оценок
-        const campEvals = getCampEvaluations(c.id);
-        const evalsCount = campEvals.length;
-        
-        let avgScore = '—';
-        if (campEvals.length > 0) {
-          const sum = campEvals.reduce((acc, curr) => acc + curr.finalScore, 0);
-          avgScore = (sum / campEvals.length).toFixed(2);
-        }
-
-        const card = document.createElement('div');
-        card.className = 'bg-slate-800/80 border border-slate-700/60 p-4 rounded-xl flex flex-col justify-between gap-3 hover:border-slate-600 transition shadow-sm';
-        card.innerHTML = `
-          <div>
-            <div class="flex items-start justify-between gap-2">
-              <div class="font-bold text-white text-base">${c.name}</div>
-              <div class="flex items-center gap-1">
-                <button onclick="openCampModal('${c.id}')" class="p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition" title="Редактировать слёт">
-                  <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                </button>
-                <button onclick="deleteCamp('${c.id}')" class="p-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900 text-rose-400 border border-rose-800/40 transition" title="Удалить слёт">
-                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                </button>
-              </div>
-            </div>
-            <div class="text-xs text-slate-400 mt-1 flex flex-wrap gap-x-3 gap-y-1">
-              <span>📍 ${c.location || 'Локация не указана'}</span>
-              <span>📅 ${c.dates || 'Даты не указаны'}</span>
-            </div>
-            <div class="flex items-center gap-3 mt-3 pt-2.5 border-t border-slate-700/60 text-xs">
-              <span class="text-indigo-400 font-semibold flex items-center gap-1">
-                <i data-lucide="users" class="w-3.5 h-3.5"></i> В составе: ${rosterCount}
-              </span>
-              <span class="text-emerald-400 font-semibold flex items-center gap-1">
-                <i data-lucide="award" class="w-3.5 h-3.5"></i> Оценено: ${evalsCount}
-              </span>
-              <span class="text-amber-300 font-bold ml-auto">
-                Средний K: ${avgScore}
-              </span>
-            </div>
-          </div>
-          <div class="flex items-center gap-2 pt-1">
-            <button onclick="openRosterModal('${c.id}')" class="flex-1 py-1.5 px-2 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 border border-indigo-500/30">
-              <i data-lucide="users" class="w-3.5 h-3.5"></i> Состав (${rosterCount})
-            </button>
-            <button onclick="viewCampDossier('${c.id}')" class="flex-1 py-1.5 px-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5">
-              <i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i> Досье слёта
-            </button>
-          </div>
-        `;
-        container.appendChild(card);
-      });
-      lucide.createIcons();
-    }
-
     /* ================= 2-STEP EVALUATION WORKFLOW ================= */
-    
-    // STEP 1: Запуск диалога выбора слёта и человека
     function startEvaluationFlow(campId = null, staffId = null) {
       if (campsList.length === 0) {
         showToast("Сначала создайте хотя бы один слёт!", "error");
@@ -1347,7 +1359,6 @@
       lucide.createIcons();
     }
 
-    // STEP 2: Переход непосредственно к полям оценки
     function proceedToEvaluationFields() {
       evalSessionCampId = document.getElementById('step1CampSelect').value;
       evalSessionStaffId = document.getElementById('step1StaffSelect').value;
@@ -1372,7 +1383,6 @@
       const deleteBtn = document.getElementById('deleteCurrentEvalBtn');
 
       if (existing) {
-        // Подгрузка существующих данных
         evalSessionExistingDocId = existing.id;
         modeBadge.className = 'text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-amber-950 text-amber-300 border border-amber-500/50';
         modeBadge.textContent = 'Обновление оценки';
@@ -1400,7 +1410,6 @@
 
         showToast("Существующие оценки успешно подгружены", "info");
       } else {
-        // Чистая форма со стандартными значениями
         evalSessionExistingDocId = null;
         modeBadge.className = 'text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-indigo-950 text-indigo-300 border border-indigo-500/50';
         modeBadge.textContent = 'Новая оценка';
@@ -1564,14 +1573,12 @@
         timestamp: Date.now()
       };
 
-      // Проверяем, включен ли сотрудник в состав слёта
       const camp = campsList.find(c => c.id === campId);
       if (camp && (!camp.roster || !camp.roster.includes(staffId))) {
         const updatedRoster = [...(camp.roster || []), staffId];
         db.collection('camps').doc(campId).update({ roster: updatedRoster });
       }
 
-      // Перепроверяем наличие существующего документа для предотвращения случайного дублирования
       const existing = evaluationsList.find(ev => ev.campId === campId && ev.staffId === staffId);
       const targetDocId = evalSessionExistingDocId || (existing ? existing.id : null);
 
@@ -1621,7 +1628,6 @@
         badge.className = "text-[10px] text-rose-400 font-bold";
       }
 
-      // История смен
       const userEvals = evaluationsList.filter(e => e.staffId === staffId && campsList.some(c => c.id === e.campId));
       userEvals.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
@@ -1655,7 +1661,6 @@
         });
       }
 
-      // Debrief Script
       const scriptBox = document.getElementById('dosDebriefScript');
       if (m.isStopListed) {
         scriptBox.innerHTML = `«Сотрудник дисквалифицирован за критическое нарушение безопасности/дисциплины. Допуск на следующие смены закрыт.»`;
@@ -1959,7 +1964,6 @@
       }
     }
 
-    // При исключении сотрудника из слёта удаляются и все его оценки за этот слёт
     function removeStaffFromRoster(campId, staffId) {
       const camp = campsList.find(c => c.id === campId);
       const staff = staffList.find(s => s.id === staffId);
@@ -1972,7 +1976,6 @@
         onConfirm: () => {
           const updated = (camp.roster || []).filter(id => id !== staffId);
           db.collection('camps').doc(campId).update({ roster: updated }).then(() => {
-            // Удаляем оценку по этому слёту, чтобы счётчик Оценено корректно уменьшился
             const evalsToDelete = evaluationsList.filter(e => e.campId === campId && e.staffId === staffId);
             evalsToDelete.forEach(ev => {
               db.collection('evaluations').doc(ev.id).delete();
@@ -2150,7 +2153,6 @@
 
       const wb = XLSX.utils.book_new();
 
-      // Sheet 1: Staff Registry
       const staffRows = staffList.map(s => {
         const m = calculateStaffMultiCampK(s.id);
         const badge = getCategoryBadge(m);
@@ -2171,7 +2173,6 @@
       const wsStaff = XLSX.utils.json_to_sheet(staffRows);
       XLSX.utils.book_append_sheet(wb, wsStaff, "Реестр команды");
 
-      // Sheet 2: All Evaluations
       const evalRows = evaluationsList.map(e => {
         const staff = staffList.find(s => s.id === e.staffId);
         const camp = campsList.find(c => c.id === e.campId);
@@ -2193,7 +2194,6 @@
       const wsEvals = XLSX.utils.json_to_sheet(evalRows);
       XLSX.utils.book_append_sheet(wb, wsEvals, "Оценки по слётам");
 
-      // Sheet 3: Camps Summary
       const campRows = campsList.map(c => {
         const rosterCount = (c.roster || []).length;
         const campEvals = getCampEvaluations(c.id);
