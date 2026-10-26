@@ -29,7 +29,6 @@
       body { background: white !important; color: black !important; font-size: 11pt; }
     }
     .print-only { display: none; }
-    /* Стилизация скроллбаров внутри модалок */
     ::-webkit-scrollbar { width: 5px; height: 5px; }
     ::-webkit-scrollbar-track { background: rgba(30, 41, 59, 0.5); }
     ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
@@ -60,7 +59,7 @@
 
       <!-- Right Header Actions -->
       <div class="flex items-center gap-2">
-        <button onclick="openEvaluationModal()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-sm shadow-indigo-950">
+        <button onclick="startEvaluationFlow()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-sm shadow-indigo-950">
           <i data-lucide="award" class="w-4 h-4"></i>
           <span class="hidden sm:inline">Оценить</span>
         </button>
@@ -159,13 +158,10 @@
         </div>
       </div>
 
-      <!-- Staff List: Responsive Cards for Mobile, Clean Table for Desktop -->
-      <!-- 1. MOBILE CARDS (block md:hidden) -->
-      <div id="staffCardsContainer" class="block md:hidden space-y-3">
-        <!-- Rendered dynamically -->
-      </div>
+      <!-- Mobile Cards (block md:hidden) -->
+      <div id="staffCardsContainer" class="block md:hidden space-y-3"></div>
 
-      <!-- 2. DESKTOP TABLE (hidden md:block) -->
+      <!-- Desktop Table (hidden md:block) -->
       <div class="hidden md:block bg-slate-800/70 border border-slate-700/60 rounded-xl overflow-hidden shadow-sm">
         <table class="w-full text-left text-sm whitespace-nowrap">
           <thead class="bg-slate-900/80 text-slate-400 border-b border-slate-700/60 uppercase text-[11px] font-semibold tracking-wider">
@@ -215,37 +211,83 @@
 
   <!-- ==================== MODALS ==================== -->
 
-  <!-- MODAL 1: EVALUATION WIZARD (Автосброс при каждом открытии!) -->
+  <!-- MODAL: STEP 1 OF EVALUATION (ВЫБОР СЛЁТА И ЧЕЛОВЕКА) -->
+  <div id="evalSelectModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 hidden">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+        <div>
+          <h3 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+            <i data-lucide="award" class="text-indigo-400 w-5 h-5"></i> Оценка за слёт (Шаг 1 из 2)
+          </h3>
+          <p class="text-xs text-slate-400">Укажите слёт и сотрудника</p>
+        </div>
+        <button onclick="closeEvalSelectModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Слёт / Смена *</label>
+          <select id="step1CampSelect" onchange="checkStep1EvaluationStatus()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-slate-100 focus:outline-none focus:border-indigo-500"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Сотрудник *</label>
+          <select id="step1StaffSelect" onchange="checkStep1EvaluationStatus()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-slate-100 focus:outline-none focus:border-indigo-500"></select>
+        </div>
+
+        <!-- Dynamic Status Box -->
+        <div id="step1StatusBox" class="p-3 rounded-xl border text-xs leading-relaxed transition-all"></div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-3 border-t border-slate-700/60">
+        <button type="button" onclick="closeEvalSelectModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-xs font-medium">Отмена</button>
+        <button type="button" id="step1ProceedBtn" onclick="proceedToEvaluationFields()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+          <span>Далее к критериям</span>
+          <i data-lucide="arrow-right" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: STEP 2 OF EVALUATION (ПОЛЯ И КРИТЕРИИ ОЦЕНКИ С КНОПКОЙ УДАЛЕНИЯ) -->
   <div id="evalModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 hidden">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-3xl w-full flex flex-col max-h-[94vh] shadow-2xl overflow-hidden">
       <!-- Fixed Sticky Header -->
-      <div class="flex justify-between items-center px-4 sm:px-6 py-3.5 border-b border-slate-700 bg-slate-800 flex-shrink-0 z-10">
-        <div>
-          <h3 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-            <i data-lucide="award" class="text-indigo-400 w-5 h-5"></i> Оценка за слёт
-          </h3>
-          <p class="text-[11px] text-slate-400">Форма сброшена до эталонных значений</p>
+      <div class="flex justify-between items-center px-4 sm:px-6 py-3 border-b border-slate-700 bg-slate-800 flex-shrink-0 z-10">
+        <div class="flex items-center gap-2">
+          <button onclick="backToStep1Selection()" class="p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white transition" title="Вернуться к выбору слёта">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+          </button>
+          <div>
+            <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2" id="evalModalHeaderTitle">
+              Оценка за слёт
+            </h3>
+            <p class="text-[11px] text-slate-400" id="evalModalHeaderSubtitle"></p>
+          </div>
         </div>
-        <button onclick="closeEvaluationModal()" class="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white transition">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
+        <div class="flex items-center gap-2">
+          <span id="evalModeBadge" class="text-[10px] px-2 py-0.5 rounded-full font-bold"></span>
+          <button onclick="closeEvaluationModal()" class="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white transition">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
       </div>
 
       <!-- Scrollable Form Body -->
-      <div class="overflow-y-auto touch-scroll p-4 sm:p-6 space-y-5 flex-1">
-        <form id="evalWizardForm" onsubmit="saveEvaluation(event)" class="space-y-5">
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label class="block text-[11px] font-semibold text-slate-300 uppercase mb-1">Слёт / Смена *</label>
-              <select id="evalCampSelect" required onchange="onEvalCampSelectChanged()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-slate-100 focus:outline-none focus:border-indigo-500"></select>
+      <div class="overflow-y-auto touch-scroll p-4 sm:p-6 space-y-4 sm:space-y-5 flex-1">
+        <form id="evalWizardForm" onsubmit="saveEvaluation(event)" class="space-y-4 sm:space-y-5">
+          
+          <!-- Camp and Person Summary Bar -->
+          <div class="bg-slate-900/70 border border-slate-700/60 p-3 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div class="flex items-center gap-2">
+              <span class="text-slate-400">Слёт:</span>
+              <span class="font-bold text-white" id="evalTargetCampName">—</span>
             </div>
-            <div>
-              <label class="block text-[11px] font-semibold text-slate-300 uppercase mb-1">Сотрудник *</label>
-              <select id="evalStaffSelect" required onchange="calculateWizardScore()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-slate-100 focus:outline-none focus:border-indigo-500"></select>
+            <div class="flex items-center gap-2">
+              <span class="text-slate-400">Сотрудник:</span>
+              <span class="font-bold text-indigo-300" id="evalTargetStaffName">—</span>
             </div>
-            <div>
-              <label class="block text-[11px] font-semibold text-slate-300 uppercase mb-1">Роль на слёте *</label>
-              <select id="evalRoleSelect" required onchange="calculateWizardScore()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-slate-100 focus:outline-none focus:border-indigo-500">
+            <div class="w-full sm:w-auto">
+              <select id="evalRoleSelect" required onchange="calculateWizardScore()" class="w-full sm:w-auto bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
                 <optgroup label="Педагогическое направление">
                   <option value="trainee">Стажёр (Trainee)</option>
                   <option value="counselor" selected>Линейный вожатый</option>
@@ -269,7 +311,7 @@
               <i data-lucide="layers" class="text-indigo-400 w-5 h-5 flex-shrink-0"></i>
               <div>
                 <div class="text-xs sm:text-sm font-bold text-white">Режим 360° (Куратор 45% + Напарник 30% + Дети 25%)</div>
-                <div class="text-[11px] text-slate-400">Усреднение оценок для защиты от предвзятости</div>
+                <div class="text-[11px] text-slate-400">Взвешивание оценок для защиты от предвзятости</div>
               </div>
             </div>
             <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
@@ -316,7 +358,7 @@
                   <span id="val_T" class="font-bold text-indigo-400 text-sm">4.0</span>
                 </div>
                 <input type="range" id="slider_T" min="1" max="5" step="0.1" value="4.0" oninput="calculateWizardScore()" class="w-full accent-indigo-500 cursor-pointer">
-                <div class="text-[10px] text-slate-500">Подстраховка напарника, помощь штабу, отсутствие токсичности</div>
+                <div class="text-[10px] text-slate-500">Подстраховка напарника, помощь штабу, здоровая атмосфера</div>
               </div>
               <div class="space-y-1">
                 <div class="flex justify-between text-xs">
@@ -332,7 +374,7 @@
                   <span id="val_L" class="font-bold text-indigo-400 text-sm">4.0</span>
                 </div>
                 <input type="range" id="slider_L" min="1" max="5" step="0.1" value="4.0" oninput="calculateWizardScore()" class="w-full accent-indigo-500 cursor-pointer">
-                <div class="text-[10px] text-slate-500">Принятие критики куратора, не повторяет ошибок вчерашнего дня</div>
+                <div class="text-[10px] text-slate-500">Принятие критики куратора, скорость исправления ошибок</div>
               </div>
             </div>
           </div>
@@ -372,8 +414,8 @@
             </div>
           </div>
 
-          <!-- Wizard Result Bar -->
-          <div class="p-3.5 rounded-xl bg-gradient-to-r from-slate-900 to-indigo-950 border border-indigo-800/40 flex items-center justify-between gap-3">
+          <!-- Wizard Result Bar & Actions -->
+          <div class="p-3.5 rounded-xl bg-gradient-to-r from-slate-900 to-indigo-950 border border-indigo-800/40 flex flex-wrap items-center justify-between gap-3">
             <div>
               <div class="text-[10px] text-slate-400 uppercase font-semibold">Итог за этот слёт:</div>
               <div class="text-2xl sm:text-3xl font-black text-white flex items-baseline gap-2">
@@ -381,19 +423,27 @@
                 <span id="wizardKBadge" class="text-xs px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-semibold border border-indigo-500/30">Основа команды</span>
               </div>
             </div>
-            <button type="submit" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold shadow-lg shadow-emerald-950/50 transition flex items-center gap-2 text-xs sm:text-sm">
-              <i data-lucide="check-circle" class="w-4 h-4"></i> Сохранить
-            </button>
+            
+            <div class="flex items-center gap-2">
+              <!-- Delete evaluation button (only if existing evaluation) -->
+              <button type="button" id="deleteCurrentEvalBtn" onclick="deleteCurrentEvaluationFromModal()" class="hidden px-3.5 py-2.5 bg-rose-950/70 hover:bg-rose-900 text-rose-300 border border-rose-800/60 rounded-xl font-bold transition flex items-center gap-1.5 text-xs sm:text-sm" title="Удалить оценку за этот слёт">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">Удалить оценку</span>
+              </button>
+
+              <button type="submit" id="saveEvalSubmitBtn" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold shadow-lg shadow-emerald-950/50 transition flex items-center gap-2 text-xs sm:text-sm">
+                <i data-lucide="check-circle" class="w-4 h-4"></i> Сохранить
+              </button>
+            </div>
           </div>
         </form>
       </div>
     </div>
   </div>
 
-  <!-- MODAL 2: MEMBER DOSSIER (Исправлен скролл и закрытие!) -->
+  <!-- MODAL: MEMBER DOSSIER -->
   <div id="dossierModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 hidden">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-3xl w-full flex flex-col max-h-[94vh] shadow-2xl overflow-hidden">
-      <!-- Fixed Sticky Header: Never scrolls away! -->
       <div class="flex justify-between items-center px-4 sm:px-6 py-3.5 border-b border-slate-700 bg-slate-800 flex-shrink-0 z-10">
         <div>
           <h3 class="text-base sm:text-xl font-bold text-white flex items-center gap-2" id="dosName">Досье сотрудника</h3>
@@ -409,9 +459,7 @@
         </div>
       </div>
 
-      <!-- Scrollable Content with touch-scroll -->
       <div class="overflow-y-auto touch-scroll p-4 sm:p-6 space-y-5 flex-1">
-        <!-- 4 Specialized K Indicators -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
           <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-700/60 text-center">
             <div class="text-[10px] text-slate-400 uppercase font-semibold">Педагогический K</div>
@@ -435,7 +483,6 @@
           </div>
         </div>
 
-        <!-- Radar Chart -->
         <div class="bg-slate-900/50 border border-slate-700/60 p-4 rounded-xl">
           <div class="text-xs font-bold text-slate-300 uppercase mb-2">Профиль 6 векторов (Среднее по всем слётам)</div>
           <div class="h-60 sm:h-64 flex items-center justify-center">
@@ -443,13 +490,11 @@
           </div>
         </div>
 
-        <!-- History of camps -->
         <div class="space-y-2">
           <div class="text-xs font-bold text-slate-300 uppercase">История участий и оценок по слётам</div>
           <div id="dosCampsHistory" class="space-y-2"></div>
         </div>
 
-        <!-- Debrief recommendations -->
         <div class="p-3.5 rounded-xl bg-slate-900/80 border border-slate-700 space-y-1">
           <div class="text-xs font-bold text-indigo-300 uppercase flex items-center gap-1.5">
             <i data-lucide="message-square" class="w-4 h-4"></i> Готовый скрипт для дебрифинга 1-на-1
@@ -457,7 +502,6 @@
           <p class="text-xs text-slate-300 leading-relaxed" id="dosDebriefScript"></p>
         </div>
 
-        <!-- Print-only signature block -->
         <div class="print-only pt-8 grid grid-cols-2 gap-8 text-xs text-black">
           <div>Куратор слёта: ___________________ / _________________ /</div>
           <div>Руководитель смены: _______________ / _________________ /</div>
@@ -466,10 +510,9 @@
     </div>
   </div>
 
-  <!-- MODAL 3: CAMP DOSSIER (NEW: Полное досье на слёт) -->
+  <!-- MODAL: CAMP DOSSIER -->
   <div id="campDossierModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 hidden">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-3xl w-full flex flex-col max-h-[94vh] shadow-2xl overflow-hidden">
-      <!-- Fixed Sticky Header -->
       <div class="flex justify-between items-center px-4 sm:px-6 py-3.5 border-b border-slate-700 bg-slate-800 flex-shrink-0 z-10">
         <div>
           <h3 class="text-base sm:text-xl font-bold text-white flex items-center gap-2" id="campDosTitle">
@@ -487,9 +530,7 @@
         </div>
       </div>
 
-      <!-- Scrollable Body -->
       <div class="overflow-y-auto touch-scroll p-4 sm:p-6 space-y-5 flex-1">
-        <!-- Camp Overview Cards -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
           <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-700/60 text-center">
             <div class="text-[10px] text-slate-400 uppercase font-semibold">Средний K слёта</div>
@@ -513,7 +554,6 @@
           </div>
         </div>
 
-        <!-- Team Competency Radar -->
         <div class="bg-slate-900/50 border border-slate-700/60 p-4 rounded-xl">
           <div class="text-xs font-bold text-slate-300 uppercase mb-2">Командный профиль слёта (Где преуспели и где просели)</div>
           <div class="h-60 sm:h-64 flex items-center justify-center">
@@ -521,7 +561,6 @@
           </div>
         </div>
 
-        <!-- Participants Evaluation Breakdown -->
         <div class="space-y-2">
           <div class="flex justify-between items-center text-xs font-bold text-slate-300 uppercase">
             <span>Оценки сотрудников на этом слёте</span>
@@ -533,10 +572,9 @@
     </div>
   </div>
 
-  <!-- MODAL 4: CAMP ROSTER (Управление составом людей) -->
+  <!-- MODAL: CAMP ROSTER -->
   <div id="rosterModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 hidden">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-2xl w-full flex flex-col max-h-[92vh] shadow-2xl overflow-hidden">
-      <!-- Fixed Header -->
       <div class="flex justify-between items-center px-4 sm:px-6 py-3.5 border-b border-slate-700 bg-slate-800 flex-shrink-0 z-10">
         <div>
           <h3 class="text-base sm:text-lg font-bold text-white flex items-center gap-2" id="rosterCampTitle">
@@ -549,9 +587,7 @@
         </button>
       </div>
 
-      <!-- Body -->
       <div class="overflow-y-auto touch-scroll p-4 sm:p-6 space-y-4 flex-1">
-        <!-- Add select -->
         <div class="bg-slate-900/70 p-3.5 rounded-xl border border-slate-700/70 space-y-2">
           <label class="block text-xs font-semibold text-slate-300">Добавить человека в состав слёта:</label>
           <div class="flex flex-col sm:flex-row gap-2">
@@ -573,7 +609,7 @@
     </div>
   </div>
 
-  <!-- MODAL 5: ADD / EDIT STAFF -->
+  <!-- MODAL: ADD / EDIT STAFF -->
   <div id="staffModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 hidden">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-xl">
       <div class="flex justify-between items-center border-b border-slate-700 pb-3">
@@ -614,7 +650,7 @@
     </div>
   </div>
 
-  <!-- MODAL 6: ADD / EDIT CAMP -->
+  <!-- MODAL: ADD / EDIT CAMP -->
   <div id="campModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 hidden">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-xl">
       <div class="flex justify-between items-center border-b border-slate-700 pb-3">
@@ -643,11 +679,11 @@
     </div>
   </div>
 
-  <!-- MODAL 7: CUSTOM CONFIRM DIALOG (Замена confirm) -->
+  <!-- MODAL: CONFIRM DIALOG -->
   <div id="confirmModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-[9990] flex items-center justify-center p-4 hidden">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-2xl">
       <div class="flex items-center gap-3">
-        <div id="confirmModalIcon" class="w-10 h-10 rounded-xl bg-rose-950/60 text-rose-400 border border-rose-800/60 flex items-center justify-center flex-shrink-0 font-bold">
+        <div class="w-10 h-10 rounded-xl bg-rose-950/60 text-rose-400 border border-rose-800/60 flex items-center justify-center flex-shrink-0 font-bold">
           <i data-lucide="alert-triangle" class="w-5 h-5"></i>
         </div>
         <div>
@@ -662,7 +698,7 @@
     </div>
   </div>
 
-  <!-- ==================== JAVASCRIPT LOGIC ==================== -->
+  <!-- ==================== SCRIPT LOGIC ==================== -->
   <script>
     const FIREBASE_CONFIG = {
       apiKey: "AIzaSyCCVxogvgq3ly3gQ9rPKsvhV1m38faHZyU",
@@ -682,7 +718,11 @@
     let campRadarChartInstance = null;
     let currentSort = 'k_desc';
 
-    // ВЕСА ВЕКТОРОВ С УЧЕТОМ НОВОЙ РОЛИ "ОРГАНИЗАТОР"
+    // Current evaluation session state
+    let evalSessionCampId = null;
+    let evalSessionStaffId = null;
+    let evalSessionExistingDocId = null;
+
     const ROLE_WEIGHTS = {
       trainee:    { D: 0.25, A: 0.15, S: 0.20, T: 0.15, F: 0.05, L: 0.20, label: "Стажёр", type: "ped" },
       counselor:  { D: 0.15, A: 0.30, S: 0.25, T: 0.15, F: 0.10, L: 0.05, label: "Линейный вожатый", type: "ped" },
@@ -790,6 +830,9 @@
         snap.forEach(doc => evaluationsList.push({ id: doc.id, ...doc.data() }));
         updateAllViews();
         if (activeRosterCampId) renderRosterModalContent(activeRosterCampId);
+        if (!document.getElementById('evalSelectModal').classList.contains('hidden')) {
+          checkStep1EvaluationStatus();
+        }
       }, err => console.warn("Evaluations snapshot error", err));
     }
 
@@ -811,16 +854,67 @@
       renderSummaryCards();
       renderStaffRegistry();
       renderCampsList();
-      populateCampSelectDropdown();
       lucide.createIcons();
     }
 
-    /* ================= STAFF CALCULATION ENGINE ================= */
+    /* ================= ROBUST EVALUATION & K CALCULATION ================= */
+    
+    // Получение корректного списка актуальных оценок для конкретного слёта
+    function getCampEvaluations(campId) {
+      const camp = campsList.find(c => c.id === campId);
+      const roster = camp?.roster || [];
+      const evals = evaluationsList.filter(e => e.campId === campId);
+
+      // Дедупликация по сотруднику (на случай дублей оставляем самую свежую)
+      const validMap = new Map();
+      evals.forEach(ev => {
+        const staffExists = staffList.some(s => s.id === ev.staffId);
+        // Если есть состав, учитываем только тех, кто в составе; если состава нет - проверяем факт существования человека
+        const inRoster = roster.length === 0 || roster.includes(ev.staffId);
+        if (staffExists && inRoster) {
+          if (!validMap.has(ev.staffId) || (ev.timestamp || 0) > (validMap.get(ev.staffId).timestamp || 0)) {
+            validMap.set(ev.staffId, ev);
+          }
+        }
+      });
+      return Array.from(validMap.values());
+    }
+
+    // Расчёт показателей K и отладка тренда для сотрудника
     function calculateStaffMultiCampK(staffId) {
-      const evals = evaluationsList.filter(e => e.staffId === staffId);
+      // Находим все оценки сотрудника только по существующим слётам
+      const rawEvals = evaluationsList.filter(e => e.staffId === staffId && campsList.some(c => c.id === e.campId));
+
+      // Дедупликация оценок по слёту (один слёт — ровно одна актуальная оценка)
+      const campEvalMap = new Map();
+      rawEvals.forEach(ev => {
+        const camp = campsList.find(c => c.id === ev.campId);
+        // Проверяем, состоит ли человек в составе этого слёта (если состав ведется)
+        const inRoster = !camp?.roster || camp.roster.length === 0 || camp.roster.includes(staffId);
+        if (inRoster) {
+          if (!campEvalMap.has(ev.campId) || (ev.timestamp || 0) > (campEvalMap.get(ev.campId).timestamp || 0)) {
+            campEvalMap.set(ev.campId, ev);
+          }
+        }
+      });
+
+      const evals = Array.from(campEvalMap.values());
+
       if (evals.length === 0) {
-        return { overallK: 0, pedK: null, orgK: null, techK: null, trend: '—', count: 0, isStopListed: false, avgVectors: { D:0,A:0,S:0,T:0,F:0,L:0 } };
+        return {
+          overallK: 0,
+          pedK: null,
+          orgK: null,
+          techK: null,
+          trend: '—',
+          count: 0,
+          isStopListed: false,
+          avgVectors: { D: 0, A: 0, S: 0, T: 0, F: 0, L: 0 }
+        };
       }
+
+      // ХРОНОЛОГИЧЕСКАЯ СОРТИРОВКА: строго от старых к новым слётам
+      evals.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
 
       let isStopListed = false;
       const pedScores = [];
@@ -829,42 +923,65 @@
       const vectorSums = { D: 0, A: 0, S: 0, T: 0, F: 0, L: 0 };
 
       evals.forEach(ev => {
-        if (ev.finalScore === 0) isStopListed = true;
+        if (ev.finalScore === 0 || ev.isStop) {
+          isStopListed = true;
+        }
         const roleType = ROLE_WEIGHTS[ev.role]?.type || 'ped';
         if (roleType === 'ped') pedScores.push(ev.finalScore);
         else if (roleType === 'org') orgScores.push(ev.finalScore);
         else techScores.push(ev.finalScore);
 
         if (ev.vectors) {
-          for (let k in vectorSums) vectorSums[k] += (ev.vectors[k] || 4.0);
+          for (let k in vectorSums) {
+            vectorSums[k] += (Number(ev.vectors[k]) || 4.0);
+          }
         }
       });
 
-      const avg = arr => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length) : null;
-      const pedK = avg(pedScores);
-      const orgK = avg(orgScores);
-      const techK = avg(techScores);
+      const calcWeightedK = (scores) => {
+        if (!scores.length) return null;
+        let totalW = 0;
+        let weightedSum = 0;
+        scores.forEach((s, idx) => {
+          const w = 1.0 + (idx * 0.15); // Более свежие смены имеют чуть больший вес
+          weightedSum += s * w;
+          totalW += w;
+        });
+        return totalW > 0 ? parseFloat((weightedSum / totalW).toFixed(2)) : null;
+      };
+
+      const pedK = calcWeightedK(pedScores);
+      const orgK = calcWeightedK(orgScores);
+      const techK = calcWeightedK(techScores);
 
       let overallK = 0;
       if (isStopListed) {
-        overallK = 0;
+        overallK = 0.00;
       } else {
         let totalW = 0;
         let weightedSum = 0;
         evals.forEach((ev, idx) => {
-          const recencyWeight = 1.0 + (idx * 0.15);
-          weightedSum += ev.finalScore * recencyWeight;
-          totalW += recencyWeight;
+          const w = 1.0 + (idx * 0.15);
+          weightedSum += ev.finalScore * w;
+          totalW += w;
         });
-        overallK = totalW > 0 ? (weightedSum / totalW) : 0;
+        overallK = totalW > 0 ? parseFloat((weightedSum / totalW).toFixed(2)) : 0;
       }
 
-      let trend = '→ Стабильно';
+      // ОТЛАЖЕННЫЙ ТРЕНД: точное сравнение последнего слёта с предпоследним
+      let trend = '—';
       if (evals.length >= 2) {
-        const first = evals[0].finalScore;
-        const last = evals[evals.length - 1].finalScore;
-        if (last - first >= 0.2) trend = '↗ Рост';
-        else if (first - last >= 0.2) trend = '↘ Спад';
+        const latestScore = evals[evals.length - 1].finalScore;
+        const prevScore = evals[evals.length - 2].finalScore;
+        const delta = parseFloat((latestScore - prevScore).toFixed(2));
+        
+        if (delta >= 0.15) {
+          trend = `↗ +${delta}`;
+        } else if (delta <= -0.15) {
+          trend = `↘ ${delta}`;
+        } else {
+          trend = '→ Стабильно';
+        }
       }
 
       const avgVectors = {};
@@ -873,10 +990,10 @@
       }
 
       return {
-        overallK: parseFloat(overallK.toFixed(2)),
-        pedK: pedK ? parseFloat(pedK.toFixed(2)) : null,
-        orgK: orgK ? parseFloat(orgK.toFixed(2)) : null,
-        techK: techK ? parseFloat(techK.toFixed(2)) : null,
+        overallK,
+        pedK,
+        orgK,
+        techK,
         trend,
         count: evals.length,
         isStopListed,
@@ -924,7 +1041,6 @@
         return true;
       });
 
-      // Sorting
       filtered.sort((a, b) => {
         const ma = calculateStaffMultiCampK(a.id);
         const mb = calculateStaffMultiCampK(b.id);
@@ -945,11 +1061,8 @@
         emptyNotice.classList.add('hidden');
       }
 
-      // Render Desktop Table
       renderDesktopTable(filtered);
-      // Render Mobile Cards
       renderMobileCards(filtered);
-
       lucide.createIcons();
     }
 
@@ -1004,7 +1117,7 @@
             <button onclick="viewDossier('${member.id}')" class="p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-indigo-300 transition" title="Досье сотрудника">
               <i data-lucide="file-text" class="w-4 h-4"></i>
             </button>
-            <button onclick="openEvaluationModal(null, '${member.id}')" class="p-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition" title="Оценить">
+            <button onclick="startEvaluationFlow(null, '${member.id}')" class="p-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition" title="Оценить">
               <i data-lucide="award" class="w-4 h-4"></i>
             </button>
             <button onclick="openStaffModal('${member.id}')" class="p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition" title="Редактировать">
@@ -1071,7 +1184,7 @@
             <button onclick="viewDossier('${member.id}')" class="flex-1 py-1.5 bg-slate-700 hover:bg-slate-600 text-indigo-300 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1">
               <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Досье
             </button>
-            <button onclick="openEvaluationModal(null, '${member.id}')" class="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1">
+            <button onclick="startEvaluationFlow(null, '${member.id}')" class="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1">
               <i data-lucide="award" class="w-3.5 h-3.5"></i> Оценить
             </button>
             <button onclick="openStaffModal('${member.id}')" class="p-1.5 bg-slate-700 text-slate-300 rounded-lg" title="Редактировать">
@@ -1099,7 +1212,8 @@
 
       campsList.forEach(c => {
         const rosterCount = (c.roster || []).length;
-        const campEvals = evaluationsList.filter(e => e.campId === c.id);
+        // Точный расчет только живых и актуальных оценок
+        const campEvals = getCampEvaluations(c.id);
         const evalsCount = campEvals.length;
         
         let avgScore = '—';
@@ -1153,72 +1267,202 @@
       lucide.createIcons();
     }
 
-    /* ================= EVALUATION WIZARD (AUTO-RESET ALWAYS!) ================= */
-    function openEvaluationModal(campId = null, staffId = null) {
-      // 1. Полный сброс слайдеров к дефолту
-      document.getElementById('slider_D').value = 4.0;
-      document.getElementById('slider_A').value = 4.0;
-      document.getElementById('slider_S').value = 4.5;
-      document.getElementById('slider_T').value = 4.0;
-      document.getElementById('slider_F').value = 4.0;
-      document.getElementById('slider_L').value = 4.0;
+    /* ================= 2-STEP EVALUATION WORKFLOW ================= */
+    
+    // STEP 1: Запуск диалога выбора слёта и человека
+    function startEvaluationFlow(campId = null, staffId = null) {
+      if (campsList.length === 0) {
+        showToast("Сначала создайте хотя бы один слёт!", "error");
+        return;
+      }
+      if (staffList.length === 0) {
+        showToast("Сначала добавьте хотя бы одного сотрудника в базу!", "error");
+        return;
+      }
 
-      // 2. Сброс бонусов и штрафов
-      document.getElementById('modSolo').checked = false;
-      document.getElementById('modHardAge').checked = false;
-      document.getElementById('modSaveCamp').checked = false;
-      document.getElementById('penLate').checked = false;
-      document.getElementById('penDisrupt').checked = false;
-      document.getElementById('stopFactor').checked = false;
-      document.getElementById('eval360Mode').checked = false;
+      const campSelect = document.getElementById('step1CampSelect');
+      const staffSelect = document.getElementById('step1StaffSelect');
 
-      // 3. Выбор роли по умолчанию
-      document.getElementById('evalRoleSelect').value = 'counselor';
+      campSelect.innerHTML = campsList.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+      if (campId && campsList.some(c => c.id === campId)) {
+        campSelect.value = campId;
+      }
 
-      // 4. Заполнение селектов слётов и персонала
-      populateCampSelectDropdown();
+      staffSelect.innerHTML = staffList.map(s => {
+        return `<option value="${s.id}">${s.name} ${s.nickname ? '«'+s.nickname+'»' : ''} (${ROLE_WEIGHTS[s.primaryRole]?.label || s.primaryRole})</option>`;
+      }).join('');
+      if (staffId && staffList.some(s => s.id === staffId)) {
+        staffSelect.value = staffId;
+      }
 
-      if (campId) document.getElementById('evalCampSelect').value = campId;
-      onEvalCampSelectChanged();
-      if (staffId) document.getElementById('evalStaffSelect').value = staffId;
+      checkStep1EvaluationStatus();
+      document.getElementById('evalSelectModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeEvalSelectModal() {
+      document.getElementById('evalSelectModal').classList.add('hidden');
+    }
+
+    function checkStep1EvaluationStatus() {
+      const campId = document.getElementById('step1CampSelect').value;
+      const staffId = document.getElementById('step1StaffSelect').value;
+      const statusBox = document.getElementById('step1StatusBox');
+      const proceedBtn = document.getElementById('step1ProceedBtn');
+
+      if (!campId || !staffId) {
+        statusBox.className = 'hidden';
+        return;
+      }
+
+      const existing = evaluationsList.find(e => e.campId === campId && e.staffId === staffId);
+      const camp = campsList.find(c => c.id === campId);
+      const staff = staffList.find(s => s.id === staffId);
+      const isEnrolledInRoster = camp?.roster && camp.roster.includes(staffId);
+
+      if (existing) {
+        statusBox.className = 'p-3 rounded-xl border border-amber-500/40 bg-amber-950/40 text-amber-200 text-xs leading-relaxed';
+        statusBox.innerHTML = `
+          <div class="font-bold flex items-center gap-1.5 text-amber-300">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i> Оценка уже существует (K = ${existing.finalScore.toFixed(2)})
+          </div>
+          <div class="mt-1 text-[11px] text-amber-200/80">
+            Для сотрудника <b>${staff?.name}</b> на этом слёте уже сохранены баллы. Они будут автоматически загружены в форму для редактирования.
+          </div>
+        `;
+        proceedBtn.innerHTML = `<span>Редактировать оценку</span> <i data-lucide="arrow-right" class="w-4 h-4"></i>`;
+      } else {
+        statusBox.className = 'p-3 rounded-xl border border-indigo-500/40 bg-indigo-950/40 text-indigo-200 text-xs leading-relaxed';
+        statusBox.innerHTML = `
+          <div class="font-bold flex items-center gap-1.5 text-indigo-300">
+            <i data-lucide="sparkles" class="w-4 h-4"></i> Новая оценка
+          </div>
+          <div class="mt-1 text-[11px] text-indigo-200/80">
+            Сотрудник <b>${staff?.name}</b> ещё не оценивался на слёте «${camp?.name}». Форма откроется со стандартными чистыми полями.
+            ${!isEnrolledInRoster ? '<br><span class="text-indigo-400 mt-1 inline-block">⭐ При оценке сотрудник автоматически добавится в состав слёта.</span>' : ''}
+          </div>
+        `;
+        proceedBtn.innerHTML = `<span>Далее к критериям</span> <i data-lucide="arrow-right" class="w-4 h-4"></i>`;
+      }
+      lucide.createIcons();
+    }
+
+    // STEP 2: Переход непосредственно к полям оценки
+    function proceedToEvaluationFields() {
+      evalSessionCampId = document.getElementById('step1CampSelect').value;
+      evalSessionStaffId = document.getElementById('step1StaffSelect').value;
+
+      if (!evalSessionCampId || !evalSessionStaffId) {
+        showToast("Укажите слёт и сотрудника!", "error");
+        return;
+      }
+
+      closeEvalSelectModal();
+
+      const camp = campsList.find(c => c.id === evalSessionCampId);
+      const staff = staffList.find(s => s.id === evalSessionStaffId);
+
+      document.getElementById('evalTargetCampName').textContent = camp ? camp.name : 'Слёт';
+      document.getElementById('evalTargetStaffName').textContent = staff ? staff.name : 'Сотрудник';
+      document.getElementById('evalModalHeaderSubtitle').textContent = `${camp?.name} • ${staff?.name}`;
+
+      const existing = evaluationsList.find(e => e.campId === evalSessionCampId && e.staffId === evalSessionStaffId);
+      const modeBadge = document.getElementById('evalModeBadge');
+      const submitBtn = document.getElementById('saveEvalSubmitBtn');
+      const deleteBtn = document.getElementById('deleteCurrentEvalBtn');
+
+      if (existing) {
+        // Подгрузка существующих данных
+        evalSessionExistingDocId = existing.id;
+        modeBadge.className = 'text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-amber-950 text-amber-300 border border-amber-500/50';
+        modeBadge.textContent = 'Обновление оценки';
+        document.getElementById('evalModalHeaderTitle').textContent = 'Редактирование оценки';
+        submitBtn.innerHTML = `<i data-lucide="refresh-cw" class="w-4 h-4"></i> Обновить оценку`;
+        deleteBtn.classList.remove('hidden');
+
+        document.getElementById('evalRoleSelect').value = existing.role || staff?.primaryRole || 'counselor';
+
+        const v = existing.vectors || { D: 4.0, A: 4.0, S: 4.5, T: 4.0, F: 4.0, L: 4.0 };
+        document.getElementById('slider_D').value = v.D ?? 4.0;
+        document.getElementById('slider_A').value = v.A ?? 4.0;
+        document.getElementById('slider_S').value = v.S ?? 4.5;
+        document.getElementById('slider_T').value = v.T ?? 4.0;
+        document.getElementById('slider_F').value = v.F ?? 4.0;
+        document.getElementById('slider_L').value = v.L ?? 4.0;
+
+        document.getElementById('modSolo').checked = !!existing.modifiers?.solo;
+        document.getElementById('modHardAge').checked = !!existing.modifiers?.hardAge;
+        document.getElementById('modSaveCamp').checked = !!existing.modifiers?.saveCamp;
+        document.getElementById('penLate').checked = !!existing.penalties?.late;
+        document.getElementById('penDisrupt').checked = !!existing.penalties?.disrupt;
+        document.getElementById('stopFactor').checked = !!existing.isStop;
+        document.getElementById('eval360Mode').checked = !!existing.is360;
+
+        showToast("Существующие оценки успешно подгружены", "info");
+      } else {
+        // Чистая форма со стандартными значениями
+        evalSessionExistingDocId = null;
+        modeBadge.className = 'text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-indigo-950 text-indigo-300 border border-indigo-500/50';
+        modeBadge.textContent = 'Новая оценка';
+        document.getElementById('evalModalHeaderTitle').textContent = 'Новая оценка';
+        submitBtn.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4"></i> Сохранить`;
+        deleteBtn.classList.add('hidden');
+
+        document.getElementById('evalRoleSelect').value = staff?.primaryRole || 'counselor';
+        document.getElementById('slider_D').value = 4.0;
+        document.getElementById('slider_A').value = 4.0;
+        document.getElementById('slider_S').value = 4.5;
+        document.getElementById('slider_T').value = 4.0;
+        document.getElementById('slider_F').value = 4.0;
+        document.getElementById('slider_L').value = 4.0;
+
+        document.getElementById('modSolo').checked = false;
+        document.getElementById('modHardAge').checked = false;
+        document.getElementById('modSaveCamp').checked = false;
+        document.getElementById('penLate').checked = false;
+        document.getElementById('penDisrupt').checked = false;
+        document.getElementById('stopFactor').checked = false;
+        document.getElementById('eval360Mode').checked = false;
+      }
 
       calculateWizardScore();
       document.getElementById('evalModal').classList.remove('hidden');
       lucide.createIcons();
     }
 
+    function backToStep1Selection() {
+      closeEvaluationModal();
+      startEvaluationFlow(evalSessionCampId, evalSessionStaffId);
+    }
+
     function closeEvaluationModal() {
       document.getElementById('evalModal').classList.add('hidden');
     }
 
-    function populateCampSelectDropdown() {
-      const campSelect = document.getElementById('evalCampSelect');
-      if (!campSelect) return;
-      const current = campSelect.value;
-      campSelect.innerHTML = campsList.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-      if (current && campsList.some(c => c.id === current)) {
-        campSelect.value = current;
-      }
+    /* ================= ФУНКЦИЯ УДАЛЕНИЯ ОЦЕНКИ ================= */
+    function deleteEvaluation(evalId) {
+      if (!evalId) return;
+      showConfirmDialog({
+        title: "Удалить оценку?",
+        message: "Оценка за этот слёт будет удалена, а общий K и счётчик «Оценено» пересчитаны.",
+        confirmText: "Да, удалить",
+        onConfirm: () => {
+          db.collection('evaluations').doc(evalId).delete().then(() => {
+            showToast("Оценка успешно удалена", "info");
+            closeEvaluationModal();
+            updateAllViews();
+            if (activeRosterCampId) renderRosterModalContent(activeRosterCampId);
+          }).catch(err => {
+            showToast("Ошибка удаления: " + err.message, "error");
+          });
+        }
+      });
     }
 
-    function onEvalCampSelectChanged() {
-      const campId = document.getElementById('evalCampSelect').value;
-      const staffSelect = document.getElementById('evalStaffSelect');
-      const camp = campsList.find(c => c.id === campId);
-      const roster = camp?.roster || [];
-
-      let sorted = [...staffList].sort((a, b) => {
-        const aIn = roster.includes(a.id) ? 0 : 1;
-        const bIn = roster.includes(b.id) ? 0 : 1;
-        return aIn - bIn;
-      });
-
-      staffSelect.innerHTML = sorted.map(s => {
-        const inBadge = roster.includes(s.id) ? '⭐ [В составе]' : '';
-        return `<option value="${s.id}">${inBadge} ${s.name} ${s.nickname ? '('+s.nickname+')' : ''}</option>`;
-      }).join('');
-
-      calculateWizardScore();
+    function deleteCurrentEvaluationFromModal() {
+      if (evalSessionExistingDocId) {
+        deleteEvaluation(evalSessionExistingDocId);
+      }
     }
 
     function calculateWizardScore() {
@@ -1282,18 +1526,18 @@
 
     function saveEvaluation(e) {
       e.preventDefault();
-      const campId = document.getElementById('evalCampSelect').value;
-      const staffId = document.getElementById('evalStaffSelect').value;
+      const campId = evalSessionCampId;
+      const staffId = evalSessionStaffId;
       const role = document.getElementById('evalRoleSelect').value;
       const isStop = document.getElementById('stopFactor').checked;
 
       if (!campId || !staffId) {
-        showToast("Выберите слёт и сотрудника!", "error");
+        showToast("Ошибка сессии оценки!", "error");
         return;
       }
 
       const score = isStop ? 0 : parseFloat(document.getElementById('wizardKResult').textContent);
-      const newEval = {
+      const evalData = {
         staffId,
         campId,
         role,
@@ -1306,25 +1550,49 @@
           F: parseFloat(document.getElementById('slider_F').value),
           L: parseFloat(document.getElementById('slider_L').value)
         },
+        modifiers: {
+          solo: document.getElementById('modSolo').checked,
+          hardAge: document.getElementById('modHardAge').checked,
+          saveCamp: document.getElementById('modSaveCamp').checked
+        },
+        penalties: {
+          late: document.getElementById('penLate').checked,
+          disrupt: document.getElementById('penDisrupt').checked
+        },
+        isStop,
+        is360: document.getElementById('eval360Mode').checked,
         timestamp: Date.now()
       };
 
-      // Ensure staff is in camp roster
+      // Проверяем, включен ли сотрудник в состав слёта
       const camp = campsList.find(c => c.id === campId);
       if (camp && (!camp.roster || !camp.roster.includes(staffId))) {
         const updatedRoster = [...(camp.roster || []), staffId];
         db.collection('camps').doc(campId).update({ roster: updatedRoster });
       }
 
-      db.collection('evaluations').add(newEval).then(() => {
-        showToast("Оценка успешно зафиксирована в базе!", "success");
-        closeEvaluationModal();
-      }).catch(err => {
-        showToast("Ошибка записи: " + err.message, "error");
-      });
+      // Перепроверяем наличие существующего документа для предотвращения случайного дублирования
+      const existing = evaluationsList.find(ev => ev.campId === campId && ev.staffId === staffId);
+      const targetDocId = evalSessionExistingDocId || (existing ? existing.id : null);
+
+      if (targetDocId) {
+        db.collection('evaluations').doc(targetDocId).set(evalData, { merge: true }).then(() => {
+          showToast("Оценка сотрудника успешно обновлена!", "success");
+          closeEvaluationModal();
+        }).catch(err => {
+          showToast("Ошибка обновления: " + err.message, "error");
+        });
+      } else {
+        db.collection('evaluations').add(evalData).then(() => {
+          showToast("Новая оценка успешно сохранена в облаке!", "success");
+          closeEvaluationModal();
+        }).catch(err => {
+          showToast("Ошибка сохранения: " + err.message, "error");
+        });
+      }
     }
 
-    /* ================= DOSSIER: MEMBER (FIXED SCROLL & CLOSE) ================= */
+    /* ================= DOSSIER: MEMBER ================= */
     function viewDossier(staffId) {
       const member = staffList.find(s => s.id === staffId);
       if (!member) return;
@@ -1353,8 +1621,10 @@
         badge.className = "text-[10px] text-rose-400 font-bold";
       }
 
-      // History
-      const userEvals = evaluationsList.filter(e => e.staffId === staffId);
+      // История смен
+      const userEvals = evaluationsList.filter(e => e.staffId === staffId && campsList.some(c => c.id === e.campId));
+      userEvals.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
       const histDiv = document.getElementById('dosCampsHistory');
       histDiv.innerHTML = '';
       if (userEvals.length === 0) {
@@ -1369,8 +1639,16 @@
               <div class="font-bold text-white">${c.name}</div>
               <div class="text-slate-400">${ROLE_WEIGHTS[ev.role]?.label || ev.role}</div>
             </div>
-            <div class="font-black text-sm ${ev.finalScore >= 4.3 ? 'text-amber-400' : (ev.finalScore >= 3.6 ? 'text-emerald-400' : 'text-rose-400')}">
-              K = ${ev.finalScore.toFixed(2)}
+            <div class="flex items-center gap-2">
+              <span class="font-black text-sm ${ev.finalScore >= 4.3 ? 'text-amber-400' : (ev.finalScore >= 3.6 ? 'text-emerald-400' : 'text-rose-400')}">
+                K = ${ev.finalScore.toFixed(2)}
+              </span>
+              <button onclick="closeDossierModal(); startEvaluationFlow('${ev.campId}', '${staffId}');" class="p-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300" title="Изменить оценку">
+                <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+              </button>
+              <button onclick="deleteEvaluation('${ev.id}')" class="p-1 rounded bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800/40" title="Удалить оценку">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
             </div>
           `;
           histDiv.appendChild(item);
@@ -1452,7 +1730,7 @@
       });
     }
 
-    /* ================= DOSSIER: CAMP (NEW) ================= */
+    /* ================= DOSSIER: CAMP ================= */
     function viewCampDossier(campId) {
       const camp = campsList.find(c => c.id === campId);
       if (!camp) return;
@@ -1461,7 +1739,7 @@
       document.getElementById('campDosMeta').textContent = `Локация: ${camp.location || '—'} • Даты: ${camp.dates || '—'}`;
 
       const roster = camp.roster || [];
-      const campEvals = evaluationsList.filter(e => e.campId === campId);
+      const campEvals = getCampEvaluations(campId);
       
       document.getElementById('campDosRosterCount').textContent = roster.length;
       
@@ -1490,7 +1768,6 @@
       document.getElementById('campDosEvaluatedCount').textContent = `${campEvals.length} из ${roster.length}`;
       document.getElementById('campDosParticipantsBadge').textContent = `${campEvals.length} оценок`;
 
-      // Render participants list in camp dossier
       const listDiv = document.getElementById('campDosParticipantsList');
       listDiv.innerHTML = '';
       if (roster.length === 0) {
@@ -1505,9 +1782,19 @@
           
           let scoreHtml = '';
           if (ev) {
-            scoreHtml = `<span class="font-black text-sm ${ev.finalScore >= 4.3 ? 'text-amber-400' : (ev.finalScore >= 3.6 ? 'text-emerald-400' : 'text-rose-400')}">K = ${ev.finalScore.toFixed(2)}</span>`;
+            scoreHtml = `
+              <div class="flex items-center gap-2">
+                <span class="font-black text-sm ${ev.finalScore >= 4.3 ? 'text-amber-400' : (ev.finalScore >= 3.6 ? 'text-emerald-400' : 'text-rose-400')}">K = ${ev.finalScore.toFixed(2)}</span>
+                <button onclick="closeCampDossierModal(); startEvaluationFlow('${campId}', '${staffId}');" class="p-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300" title="Изменить оценку">
+                  <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                </button>
+                <button onclick="deleteEvaluation('${ev.id}')" class="p-1 rounded bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800/40" title="Удалить оценку">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            `;
           } else {
-            scoreHtml = `<button onclick="openEvaluationModal('${campId}', '${staffId}')" class="px-2.5 py-1 rounded bg-indigo-600/30 hover:bg-indigo-600 text-indigo-300 hover:text-white transition font-medium">Оценить</button>`;
+            scoreHtml = `<button onclick="closeCampDossierModal(); startEvaluationFlow('${campId}', '${staffId}');" class="px-2.5 py-1 rounded bg-indigo-600/30 hover:bg-indigo-600 text-indigo-300 hover:text-white transition font-medium">Оценить</button>`;
           }
 
           item.innerHTML = `
@@ -1523,7 +1810,6 @@
         });
       }
 
-      // Render Team Radar Chart
       renderCampRadar(teamVectors);
       document.getElementById('campDossierModal').classList.remove('hidden');
       lucide.createIcons();
@@ -1637,9 +1923,14 @@
           </div>
           <div class="flex items-center gap-1.5">
             ${evalBadge}
-            <button onclick="openEvaluationModal('${campId}', '${staff.id}')" class="p-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 transition" title="Оценить">
+            <button onclick="closeRosterModal(); startEvaluationFlow('${campId}', '${staff.id}');" class="p-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 transition" title="Оценить / Изменить">
               <i data-lucide="award" class="w-3.5 h-3.5"></i>
             </button>
+            ${ev ? `
+              <button onclick="deleteEvaluation('${ev.id}')" class="p-1.5 rounded-lg bg-amber-950/40 hover:bg-amber-900 text-amber-300 border border-amber-800/40 transition" title="Сбросить оценку за слёт">
+                <i data-lucide="eraser" class="w-3.5 h-3.5"></i>
+              </button>
+            ` : ''}
             <button onclick="removeStaffFromRoster('${campId}', '${staff.id}')" class="p-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900 text-rose-400 border border-rose-800/40 transition" title="Убрать из слёта">
               <i data-lucide="user-minus" class="w-3.5 h-3.5"></i>
             </button>
@@ -1668,6 +1959,7 @@
       }
     }
 
+    // При исключении сотрудника из слёта удаляются и все его оценки за этот слёт
     function removeStaffFromRoster(campId, staffId) {
       const camp = campsList.find(c => c.id === campId);
       const staff = staffList.find(s => s.id === staffId);
@@ -1675,13 +1967,18 @@
 
       showConfirmDialog({
         title: "Исключить из слёта?",
-        message: `Убрать ${staff.name} из состава слёта "${camp.name}"?`,
+        message: `Убрать ${staff.name} из состава слёта "${camp.name}"? Оценки этого сотрудника за данный слёт также будут аннулированы.`,
         confirmText: "Исключить",
         onConfirm: () => {
           const updated = (camp.roster || []).filter(id => id !== staffId);
-          db.collection('camps').doc(campId).update({ roster: updated })
-            .then(() => showToast("Сотрудник исключён из слёта", "info"))
-            .catch(err => showToast("Ошибка: " + err.message, "error"));
+          db.collection('camps').doc(campId).update({ roster: updated }).then(() => {
+            // Удаляем оценку по этому слёту, чтобы счётчик Оценено корректно уменьшился
+            const evalsToDelete = evaluationsList.filter(e => e.campId === campId && e.staffId === staffId);
+            evalsToDelete.forEach(ev => {
+              db.collection('evaluations').doc(ev.id).delete();
+            });
+            showToast("Сотрудник исключён из слёта, оценка аннулирована", "info");
+          }).catch(err => showToast("Ошибка: " + err.message, "error"));
         }
       });
     }
@@ -1839,7 +2136,7 @@
               db.collection('evaluations').doc(ev.id).delete();
             });
             showToast("Слёт удалён", "info");
-          }).catch(err => showToast("Ошибка: " + err.message, "error"));
+          }).catch(err => showToast("Ошибка удаления: " + err.message, "error"));
         }
       });
     }
@@ -1899,7 +2196,7 @@
       // Sheet 3: Camps Summary
       const campRows = campsList.map(c => {
         const rosterCount = (c.roster || []).length;
-        const campEvals = evaluationsList.filter(e => e.campId === c.id);
+        const campEvals = getCampEvaluations(c.id);
         const avg = campEvals.length > 0 ? (campEvals.reduce((a, b) => a + b.finalScore, 0) / campEvals.length).toFixed(2) : "—";
         return {
           "Название слёта": c.name,
@@ -1913,7 +2210,6 @@
       const wsCamps = XLSX.utils.json_to_sheet(campRows);
       XLSX.utils.book_append_sheet(wb, wsCamps, "Сводка слётов");
 
-      // Download file
       const fileName = `CampMetrix_360_Export_${new Date().toISOString().slice(0, 10)}.xlsx`;
       XLSX.writeFile(wb, fileName);
       showToast("Отчёт успешно выгружен в Excel (.xlsx)!", "success");
