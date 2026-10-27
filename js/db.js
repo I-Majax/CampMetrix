@@ -2,7 +2,12 @@ import { FIREBASE_CONFIG } from './config.js';
 
 let db = null;
 
-// Локальное кэширование
+export const state = {
+  staff: [],
+  camps: [],
+  evaluations: []
+};
+
 export const storage = {
   get: (key, fallback) => {
     try {
@@ -19,14 +24,12 @@ export const storage = {
   }
 };
 
-export const state = {
-  staff: storage.get('cm_staff', []),
-  camps: storage.get('cm_camps', []),
-  evaluations: storage.get('cm_evals', [])
-};
+export function initStorageAndFirebase(onUpdate, onStatusChange) {
+  state.staff = storage.get('cm_cached_staff', []);
+  state.camps = storage.get('cm_cached_camps', []);
+  state.evaluations = storage.get('cm_cached_evals', []);
+  onUpdate();
 
-// Инициализация базы данных
-export function initDB(onUpdate, onStatusChange) {
   try {
     if (!firebase.apps.length) {
       firebase.initializeApp(FIREBASE_CONFIG);
@@ -34,55 +37,65 @@ export function initDB(onUpdate, onStatusChange) {
     db = firebase.firestore();
     onStatusChange(true);
 
-    // Подписка на коллекции в реальном времени
     db.collection('camps').onSnapshot(snap => {
-      state.camps = [];
-      snap.forEach(doc => state.camps.push({ id: doc.id, ...doc.data() }));
-      storage.set('cm_camps', state.camps);
+      const remote = [];
+      snap.forEach(doc => remote.push({ id: doc.id, ...doc.data() }));
+      if (remote.length > 0 || state.camps.length === 0) {
+        state.camps = remote;
+        storage.set('cm_cached_camps', state.camps);
+      }
       onUpdate();
-    });
+    }, err => console.warn("Camps error:", err));
 
     db.collection('staff').onSnapshot(snap => {
-      state.staff = [];
-      snap.forEach(doc => state.staff.push({ id: doc.id, ...doc.data() }));
-      storage.set('cm_staff', state.staff);
+      const remote = [];
+      snap.forEach(doc => remote.push({ id: doc.id, ...doc.data() }));
+      if (remote.length > 0 || state.staff.length === 0) {
+        state.staff = remote;
+        storage.set('cm_cached_staff', state.staff);
+      }
       onUpdate();
-    });
+    }, err => console.warn("Staff error:", err));
 
     db.collection('evaluations').onSnapshot(snap => {
-      state.evaluations = [];
-      snap.forEach(doc => state.evaluations.push({ id: doc.id, ...doc.data() }));
-      storage.set('cm_evals', state.evaluations);
+      const remote = [];
+      snap.forEach(doc => remote.push({ id: doc.id, ...doc.data() }));
+      if (remote.length > 0 || state.evaluations.length === 0) {
+        state.evaluations = remote;
+        storage.set('cm_cached_evals', state.evaluations);
+      }
       onUpdate();
-    });
+    }, err => console.warn("Evals error:", err));
+
   } catch (err) {
-    console.warn("Работа в локальном режиме:", err);
+    console.warn("Локальный режим базы данных:", err);
     onStatusChange(false);
   }
 }
 
-// Методы сохранения в облако
 export async function saveRecord(collection, id, data) {
+  const list = state[collection];
   if (id) {
-    if (db) await db.collection(collection).doc(id).set(data, { merge: true });
-    const list = state[collection];
+    data.id = id;
     const idx = list.findIndex(item => item.id === id);
     if (idx !== -1) list[idx] = { ...list[idx], ...data };
+    if (db) await db.collection(collection).doc(id).set(data, { merge: true });
   } else {
-    const newDoc = { ...data, createdAt: Date.now() };
-    if (db) {
-      const ref = await db.collection(collection).add(newDoc);
-      newDoc.id = ref.id;
-    } else {
-      newDoc.id = collection + '_' + Date.now();
-    }
-    state[collection].push(newDoc);
+    const newId = collection + '_' + Date.now();
+    data.id = newId;
+    data.createdAt = Date.now();
+    list.push(data);
+    if (db) await db.collection(collection).doc(newId).set(data);
   }
-  storage.set('cm_' + collection, state[collection]);
+  storage.set('cm_cached_' + collection, list);
 }
 
 export async function deleteRecord(collection, id) {
-  if (db) await db.collection(collection).doc(id).delete();
   state[collection] = state[collection].filter(item => item.id !== id);
-  storage.set('cm_' + collection, state[collection]);
+  storage.set('cm_cached_' + collection, state[collection]);
+  if (db) await db.collection(collection).doc(id).delete().catch(e => {});
+}
+
+export function getFirestoreDB() {
+  return db;
 }

@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>CampMetrix 360°</title>
+  <title>CampMetrix 360° — Мультислетовой реестр команды</title>
   
-  <!-- Стили и библиотеки -->
+  <!-- Стили и внешние библиотеки -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -18,25 +18,35 @@
 
   <style>
     html, body {
-      background-color: #090d16;
+      min-height: 100%;
+      background-color: #0b1120;
       -webkit-tap-highlight-color: transparent;
     }
+    @media print {
+      .no-print { display: none !important; }
+      .print-only { display: block !important; }
+      body { background: white !important; color: black !important; font-size: 11pt; }
+    }
+    .print-only { display: none; }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: rgba(30, 41, 59, 0.5); }
+    ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #64748b; }
     .touch-scroll { -webkit-overflow-scrolling: touch; }
-    ::-webkit-scrollbar { width: 4px; height: 4px; }
-    ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
-    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
   </style>
 </head>
-<body class="text-slate-100 font-sans selection:bg-indigo-500 selection:text-white pb-20 md:pb-6">
+<body class="text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white pb-10">
 
-  <!-- Контейнер для всплывающих уведомлений -->
-  <div id="toastContainer" class="fixed top-3 right-3 left-3 sm:left-auto sm:w-80 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
+  <!-- Всплывающие уведомления (Toasts) -->
+  <div id="toastContainer" class="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none max-w-sm w-full px-3"></div>
 
-  <!-- Экран гостевого экспресс-опроса (по QR-коду) -->
+  <!-- Гостевой экран экспресс-опроса (по QR-коду) -->
   <div id="guestSurveyView" class="hidden min-h-screen bg-slate-950 p-4 flex flex-col items-center justify-center">
     <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6">
       <div class="text-center space-y-1">
-        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-indigo-600 flex items-center justify-center font-black text-white text-xl mx-auto">CM</div>
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-indigo-600 flex items-center justify-center font-black text-white text-xl mx-auto shadow-lg shadow-indigo-950">
+          CM
+        </div>
         <h2 class="text-xl font-bold text-white pt-2" id="guestSurveyTitle">Оценка вожатого</h2>
         <p class="text-xs text-slate-400" id="guestSurveySubtitle">Экспресс-отзыв 360°</p>
       </div>
@@ -45,140 +55,754 @@
         <input type="hidden" id="guestCampId">
         <input type="hidden" id="guestStaffId">
         <input type="hidden" id="guestType">
+
         <div id="guestQuestionsList" class="space-y-3.5"></div>
-        <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-sm shadow-lg shadow-indigo-950 transition">
+
+        <button type="submit" class="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold rounded-xl text-sm shadow-lg shadow-indigo-950 transition">
           Отправить оценку
         </button>
       </form>
 
       <div id="guestSuccessBox" class="hidden text-center py-8 space-y-3">
         <div class="w-14 h-14 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto text-2xl border border-emerald-500/40">✓</div>
-        <h3 class="text-lg font-bold text-white">Спасибо!</h3>
-        <p class="text-xs text-slate-400">Отзыв сохранён и пересчитан в профиле смены.</p>
+        <h3 class="text-lg font-bold text-white">Спасибо за ваш отзыв!</h3>
+        <p class="text-xs text-slate-400">Баллы успешно учтены в системе рейтинга слёта.</p>
       </div>
     </div>
   </div>
 
   <!-- Основное приложение -->
   <div id="adminApp" class="flex flex-col min-h-screen">
-    
-    <!-- Шапка приложения -->
-    <header class="bg-slate-900/90 backdrop-blur border-b border-slate-800/80 sticky top-0 z-30 px-4 py-3">
-      <div class="max-w-6xl mx-auto flex items-center justify-between gap-3">
-        <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-indigo-600 flex items-center justify-center font-black text-white text-base shadow-md shadow-indigo-950">
+    <!-- Header -->
+    <header class="bg-slate-900/90 backdrop-blur border-b border-slate-800 sticky top-0 z-30 px-3 sm:px-4 py-3">
+      <div class="max-w-7xl mx-auto flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2.5 sm:gap-3">
+          <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-indigo-600 flex items-center justify-center font-black text-white text-base sm:text-lg shadow-md shadow-indigo-950/50 flex-shrink-0">
             CM
           </div>
           <div>
-            <h1 class="text-base font-bold text-white tracking-tight leading-tight flex items-center gap-2">
-              CampMetrix 360°
-              <span id="cloudStatusBadge" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-            </h1>
-            <p class="text-[11px] text-slate-400">Реестр команды и оценка эффективности</p>
+            <div class="flex items-center gap-2">
+              <h1 class="text-base sm:text-lg font-bold tracking-tight text-white leading-tight">CampMetrix 360°</h1>
+              <span class="hidden sm:inline-block text-[11px] font-medium px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Cloud</span>
+            </div>
+            <p class="text-[11px] text-slate-400 truncate max-w-[200px] sm:max-w-none">Система оценки и кадровый реестр слётов</p>
           </div>
         </div>
 
         <div class="flex items-center gap-2">
-          <button id="btnExportXlsx" class="hidden sm:flex px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold items-center gap-1.5 border border-slate-700 transition">
-            <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-400"></i>
-            <span>Excel</span>
+          <button id="btnStartEvalHeader" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-sm shadow-indigo-950">
+            <i data-lucide="award" class="w-4 h-4"></i>
+            <span class="hidden sm:inline">Оценить</span>
           </button>
-          <button id="btnStartEvalHeader" class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-indigo-950">
-            <i data-lucide="plus" class="w-4 h-4"></i>
-            <span>Оценить</span>
-          </button>
+          <div id="cloudStatus" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-slate-800 text-slate-300 border border-slate-700">
+            <span id="cloudStatusDot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+            <span id="cloudStatusText" class="hidden md:inline">Подключение...</span>
+          </div>
         </div>
       </div>
     </header>
 
-    <!-- Основной контейнер -->
-    <main class="flex-1 max-w-6xl w-full mx-auto p-3 sm:p-6 space-y-5">
-      
-      <!-- Экран 1: Реестр команды -->
-      <section id="view-registry" class="space-y-4">
-        <!-- Сводные метрики -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4">
-          <div class="bg-slate-900/80 border border-slate-800 p-3.5 rounded-2xl">
-            <span class="text-[11px] text-slate-400 uppercase font-semibold">В команде</span>
-            <div class="text-2xl font-black text-white mt-0.5" id="metricTotalStaff">0</div>
+    <!-- Navigation Tabs -->
+    <nav class="bg-slate-900/60 border-b border-slate-800/80 px-3 sm:px-4 py-2 sticky top-[57px] sm:top-[65px] z-20 backdrop-blur no-print">
+      <div class="max-w-7xl mx-auto flex items-center justify-between gap-2 text-xs sm:text-sm">
+        <div class="flex items-center gap-1.5 sm:gap-2">
+          <button id="tabBtn-registry" class="tab-btn px-3 sm:px-4 py-2 rounded-lg font-semibold transition flex items-center gap-2 bg-indigo-600 text-white shadow-sm">
+            <i data-lucide="users" class="w-4 h-4"></i> Реестр команды
+          </button>
+          <button id="tabBtn-camps" class="tab-btn px-3 sm:px-4 py-2 rounded-lg font-semibold transition flex items-center gap-2 text-slate-400 hover:bg-slate-800 hover:text-slate-200">
+            <i data-lucide="tent" class="w-4 h-4"></i> Слёты и смены
+          </button>
+        </div>
+        <button id="btnExportXlsx" class="px-2.5 sm:px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 rounded-lg text-xs font-bold transition flex items-center gap-1.5" title="Выгрузить полный отчёт в Excel">
+          <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+          <span>XLSX</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 space-y-4 sm:space-y-6">
+
+      <!-- TAB 1: REGISTRY -->
+      <section id="tab-registry" class="space-y-4 sm:space-y-6">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+          <div class="bg-slate-800/70 border border-slate-700/60 rounded-xl p-3 sm:p-4">
+            <div class="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Всего в базе</div>
+            <div class="text-xl sm:text-3xl font-black text-white mt-0.5" id="statTotalStaff">0</div>
+            <div class="text-[11px] text-slate-500">сотрудников лагеря</div>
           </div>
-          <div class="bg-slate-900/80 border border-slate-800 p-3.5 rounded-2xl">
-            <span class="text-[11px] text-amber-400 uppercase font-semibold">Золотой фонд</span>
-            <div class="text-2xl font-black text-amber-300 mt-0.5" id="metricCoreStaff">0</div>
+          <div class="bg-slate-800/70 border border-slate-700/60 rounded-xl p-3 sm:p-4">
+            <div class="text-[10px] sm:text-[11px] font-semibold text-amber-400 uppercase tracking-wider">Золотой фонд (≥ 4.3)</div>
+            <div class="text-xl sm:text-3xl font-black text-amber-300 mt-0.5" id="statCoreStaff">0</div>
+            <div class="text-[11px] text-slate-500">ядро и наставники</div>
           </div>
-          <div class="bg-slate-900/80 border border-slate-800 p-3.5 rounded-2xl">
-            <span class="text-[11px] text-indigo-400 uppercase font-semibold">Слётов в базе</span>
-            <div class="text-2xl font-black text-indigo-300 mt-0.5" id="metricTotalCamps">0</div>
+          <div class="bg-slate-800/70 border border-slate-700/60 rounded-xl p-3 sm:p-4">
+            <div class="text-[10px] sm:text-[11px] font-semibold text-indigo-400 uppercase tracking-wider">Слётов в базе</div>
+            <div class="text-xl sm:text-3xl font-black text-indigo-300 mt-0.5" id="statTotalCamps">0</div>
+            <div class="text-[11px] text-slate-500">проведено смен</div>
           </div>
-          <div class="bg-slate-900/80 border border-slate-800 p-3.5 rounded-2xl">
-            <span class="text-[11px] text-rose-400 uppercase font-semibold">Стоп-лист</span>
-            <div class="text-2xl font-black text-rose-400 mt-0.5" id="metricStopList">0</div>
+          <div class="bg-slate-800/70 border border-slate-700/60 rounded-xl p-3 sm:p-4">
+            <div class="text-[10px] sm:text-[11px] font-semibold text-rose-400 uppercase tracking-wider">Стоп-лист</div>
+            <div class="text-xl sm:text-3xl font-black text-rose-400 mt-0.5" id="statStopList">0</div>
+            <div class="text-[11px] text-slate-500">нарушения ТБ и правил</div>
           </div>
         </div>
 
-        <!-- Поиск и фильтры -->
-        <div class="bg-slate-900/70 border border-slate-800/80 p-3 rounded-2xl flex flex-wrap gap-2.5 items-center justify-between">
-          <div class="relative flex-1 min-w-[200px]">
-            <i data-lucide="search" class="w-4 h-4 absolute left-3 top-2.5 text-slate-500"></i>
-            <input type="text" id="registrySearchInput" placeholder="Поиск по ФИО, позывному..." class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+        <div class="bg-slate-800/70 border border-slate-700/60 rounded-xl p-3 sm:p-4 space-y-3">
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+            <div class="relative flex-1">
+              <i data-lucide="search" class="w-4 h-4 absolute left-3 top-2.5 text-slate-400"></i>
+              <input type="text" id="searchInput" placeholder="Поиск по имени, позывному..." class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+            </div>
+            <button id="btnOpenAddStaff" class="w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-1.5 shadow-sm">
+              <i data-lucide="user-plus" class="w-4 h-4"></i> Добавить человека
+            </button>
           </div>
-          <div class="flex items-center gap-2">
-            <select id="registryRoleFilter" class="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-2 text-xs text-slate-300 focus:outline-none focus:border-indigo-500">
-              <option value="all">Все роли</option>
-              <option value="pedagogical">Вожатые</option>
-              <option value="organizer">Организаторы</option>
-              <option value="technical">Техники / Медиа</option>
-              <option value="stop">Стоп-лист</option>
-            </select>
-            <button id="btnOpenAddStaff" class="px-3.5 py-2 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
-              <i data-lucide="user-plus" class="w-4 h-4"></i>
-              <span class="hidden sm:inline">Добавить</span>
+
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-700/60 text-xs">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-slate-400 text-[11px]">Фильтр:</span>
+              <select id="roleFilter" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                <option value="all">Все профили</option>
+                <option value="pedagogical">Вожатые и стажёры</option>
+                <option value="organizer">Организаторы мероприятий</option>
+                <option value="technical">Технический персонал / Медиа</option>
+                <option value="stop">Только стоп-лист</option>
+              </select>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <span class="text-slate-400 text-[11px]">Сортировка:</span>
+              <select id="sortSelect" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                <option value="k_desc">По рейтингу K (высшие)</option>
+                <option value="k_asc">По рейтингу K (низшие)</option>
+                <option value="name_asc">По имени (А → Я)</option>
+                <option value="camps_desc">По числу слётов</option>
+                <option value="ped_desc">По Педагогическому K</option>
+                <option value="org_desc">По Организаторскому K</option>
+                <option value="tech_desc">По Техническому K</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div id="staffCardsContainer" class="block md:hidden space-y-3"></div>
+
+        <div class="hidden md:block bg-slate-800/70 border border-slate-700/60 rounded-xl overflow-hidden shadow-sm">
+          <table class="w-full text-left text-sm whitespace-nowrap">
+            <thead class="bg-slate-900/80 text-slate-400 border-b border-slate-700/60 uppercase text-[11px] font-semibold tracking-wider">
+              <tr>
+                <th class="py-3 px-4 cursor-pointer hover:text-white" id="sortHeadName">Сотрудник ⇕</th>
+                <th class="py-3 px-3 cursor-pointer hover:text-white text-center" id="sortHeadCamps">Слётов ⇕</th>
+                <th class="py-3 px-3 cursor-pointer hover:text-white text-center" id="sortHeadPed">Пед. K ⇕</th>
+                <th class="py-3 px-3 cursor-pointer hover:text-white text-center" id="sortHeadOrg">Орг. K ⇕</th>
+                <th class="py-3 px-3 cursor-pointer hover:text-white text-center" id="sortHeadTech">Тех. K ⇕</th>
+                <th class="py-3 px-3 cursor-pointer hover:text-white text-center" id="sortHeadK">Общий K ⇕</th>
+                <th class="py-3 px-3 text-center">Тренд</th>
+                <th class="py-3 px-3 text-center">Категория</th>
+                <th class="py-3 px-4 text-right">Действия</th>
+              </tr>
+            </thead>
+            <tbody id="staffTableBody" class="divide-y divide-slate-700/40"></tbody>
+          </table>
+        </div>
+
+        <div id="emptyStaffNotice" class="hidden p-8 text-center text-slate-400 text-sm bg-slate-800/30 rounded-xl border border-slate-800">
+          Сотрудники не найдены. Добавьте первого человека через кнопку «Добавить человека».
+        </div>
+      </section>
+
+      <!-- TAB 2: CAMPS -->
+      <section id="tab-camps" class="hidden space-y-4 sm:space-y-6">
+        <div class="bg-slate-800/70 border border-slate-700/60 rounded-xl p-3 sm:p-6 space-y-4 shadow-sm">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-700/60 pb-3">
+            <div>
+              <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                <i data-lucide="tent" class="text-indigo-400 w-5 h-5"></i> Слёты и смены
+              </h2>
+              <p class="text-xs text-slate-400 mt-0.5">Управление составом команд, датами выездов, умным подбором пар и оценками.</p>
+            </div>
+            <button id="btnOpenAddCamp" class="w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-1.5 shadow-sm">
+              <i data-lucide="plus" class="w-4 h-4"></i> Создать новый слёт
+            </button>
+          </div>
+
+          <div id="campsContainer" class="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4"></div>
+          
+          <div id="emptyCampsNotice" class="hidden p-8 text-center text-slate-400 text-sm bg-slate-900/40 rounded-xl border border-slate-800 space-y-3">
+            <p>Слёты пока не созданы.</p>
+            <button onclick="window.app.openCampModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold inline-flex items-center gap-1.5">
+              <i data-lucide="plus" class="w-4 h-4"></i> Создать первый слёт
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ==================== MODALS CONTAINER ==================== -->
+
+  <!-- STEP 1 OF EVALUATION -->
+  <div id="evalSelectModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 hidden">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+        <div>
+          <h3 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+            <i data-lucide="award" class="text-indigo-400 w-5 h-5"></i> Оценка за слёт (Шаг 1 из 2)
+          </h3>
+          <p class="text-xs text-slate-400">Укажите слёт и сотрудника</p>
+        </div>
+        <button id="btnCloseEvalSelectModal" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Слёт / Смена *</label>
+          <select id="step1CampSelect" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-slate-100 focus:outline-none focus:border-indigo-500"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Сотрудник *</label>
+          <select id="step1StaffSelect" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-slate-100 focus:outline-none focus:border-indigo-500"></select>
+        </div>
+
+        <div id="step1StatusBox" class="p-3 rounded-xl border text-xs leading-relaxed transition-all"></div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-3 border-t border-slate-700/60">
+        <button type="button" id="btnCancelEvalSelect" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-xs font-medium">Отмена</button>
+        <button type="button" id="step1ProceedBtn" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+          <span>Далее к критериям</span>
+          <i data-lucide="arrow-right" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2 OF EVALUATION (360° + ВЕКТОРЫ) -->
+  <div id="evalModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 hidden">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-3xl w-full flex flex-col max-h-[94vh] shadow-2xl overflow-hidden">
+      <div class="flex justify-between items-center px-4 sm:px-6 py-3 border-b border-slate-700 bg-slate-800 flex-shrink-0 z-10">
+        <div class="flex items-center gap-2">
+          <button id="btnBackToStep1" class="p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white transition" title="Вернуться к выбору слёта">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+          </button>
+          <div>
+            <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2" id="evalModalHeaderTitle">Оценка за слёт</h3>
+            <p class="text-[11px] text-slate-400" id="evalModalHeaderSubtitle"></p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="evalModeBadge" class="text-[10px] px-2 py-0.5 rounded-full font-bold"></span>
+          <button id="btnCloseEvalModal" class="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white transition">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="overflow-y-auto touch-scroll p-4 sm:p-6 space-y-4 sm:space-y-5 flex-1">
+        <form id="evalWizardForm" class="space-y-4 sm:space-y-5">
+          <div class="bg-slate-900/70 border border-slate-700/60 p-3 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div class="flex items-center gap-2">
+              <span class="text-slate-400">Слёт:</span>
+              <span class="font-bold text-white" id="evalTargetCampName">—</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-slate-400">Сотрудник:</span>
+              <span class="font-bold text-indigo-300" id="evalTargetStaffName">—</span>
+            </div>
+            <div class="w-full sm:w-auto">
+              <select id="evalRoleSelect" class="w-full sm:w-auto bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"></select>
+            </div>
+          </div>
+
+          <!-- 360 Toggle -->
+          <div class="p-3.5 rounded-xl bg-indigo-950/40 border border-indigo-500/30 space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2.5">
+                <i data-lucide="layers" class="text-indigo-400 w-5 h-5 flex-shrink-0"></i>
+                <div>
+                  <div class="text-xs sm:text-sm font-bold text-white">Режим 360° (Куратор 45% + Напарник 30% + Отряд 25%)</div>
+                  <div class="text-[11px] text-slate-400">Взвешивание оценок от 3 сторон для исключения предвзятости</div>
+                </div>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                <input type="checkbox" id="eval360Mode" class="sr-only peer">
+                <div class="w-10 h-5 bg-slate-700 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+              </label>
+            </div>
+
+            <div id="panel360Controls" class="hidden pt-3 border-t border-indigo-500/20 space-y-3">
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-700/80 space-y-1">
+                  <div class="flex justify-between items-center text-xs">
+                    <span class="text-slate-300 font-semibold">1. Куратор (45%)</span>
+                    <span id="val_360_curator" class="font-bold text-indigo-400">4.1</span>
+                  </div>
+                  <div class="text-[10px] text-slate-400">Считается по 6 векторам ниже</div>
+                  <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-2">
+                    <div id="bar_360_curator" class="bg-indigo-500 h-full w-[80%] transition-all"></div>
+                  </div>
+                </div>
+
+                <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-700/80 space-y-1">
+                  <div class="flex justify-between items-center text-xs">
+                    <span class="text-slate-300 font-semibold">2. Напарник (30%)</span>
+                    <span id="val_360_partner" class="font-bold text-purple-400">4.0</span>
+                  </div>
+                  <input type="range" id="slider_360_partner" min="1" max="5" step="0.1" value="4.0" class="w-full accent-purple-500 cursor-pointer">
+                  <div class="text-[10px] text-slate-500">Доверие, подстраховка в паре</div>
+                </div>
+
+                <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-700/80 space-y-1">
+                  <div class="flex justify-between items-center text-xs">
+                    <span class="text-slate-300 font-semibold">3. Отряд / Дети (25%)</span>
+                    <span id="val_360_squad" class="font-bold text-emerald-400">4.5</span>
+                  </div>
+                  <input type="range" id="slider_360_squad" min="1" max="5" step="0.1" value="4.5" class="w-full accent-emerald-500 cursor-pointer">
+                  <div class="text-[10px] text-slate-500">Вовлечение, климат, отзывы</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 6 Vector Sliders -->
+          <div class="space-y-3.5 bg-slate-900/60 p-4 rounded-xl border border-slate-700/60">
+            <div class="flex justify-between items-center border-b border-slate-700/60 pb-2">
+              <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider">6 векторов компетенций (1.0 — 5.0)</h4>
+              <span class="text-xs text-indigo-400 font-semibold" id="roleFormulaLabel">Вожатый</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+              <div class="space-y-1">
+                <div class="flex justify-between text-xs"><span class="text-slate-300 font-medium">1. Дисциплина и регламент (D)</span><span id="val_D" class="font-bold text-indigo-400 text-sm">4.0</span></div>
+                <input type="range" id="slider_D" min="1" max="5" step="0.1" value="4.0" class="w-full accent-indigo-500 cursor-pointer">
+              </div>
+              <div class="space-y-1">
+                <div class="flex justify-between text-xs"><span class="text-slate-300 font-medium">2. Работа с аудиторией (A)</span><span id="val_A" class="font-bold text-indigo-400 text-sm">4.0</span></div>
+                <input type="range" id="slider_A" min="1" max="5" step="0.1" value="4.0" class="w-full accent-indigo-500 cursor-pointer">
+              </div>
+              <div class="space-y-1">
+                <div class="flex justify-between text-xs"><span class="text-slate-300 font-medium">3. Безопасность и ТБ (S)</span><span id="val_S" class="font-bold text-indigo-400 text-sm">4.5</span></div>
+                <input type="range" id="slider_S" min="1" max="5" step="0.1" value="4.5" class="w-full accent-indigo-500 cursor-pointer">
+              </div>
+              <div class="space-y-1">
+                <div class="flex justify-between text-xs"><span class="text-slate-300 font-medium">4. Командность и выручка (T)</span><span id="val_T" class="font-bold text-indigo-400 text-sm">4.0</span></div>
+                <input type="range" id="slider_T" min="1" max="5" step="0.1" value="4.0" class="w-full accent-indigo-500 cursor-pointer">
+              </div>
+              <div class="space-y-1">
+                <div class="flex justify-between text-xs"><span class="text-slate-300 font-medium">5. Стресс и форс-мажор (F)</span><span id="val_F" class="font-bold text-indigo-400 text-sm">4.0</span></div>
+                <input type="range" id="slider_F" min="1" max="5" step="0.1" value="4.0" class="w-full accent-indigo-500 cursor-pointer">
+              </div>
+              <div class="space-y-1">
+                <div class="flex justify-between text-xs"><span class="text-slate-300 font-medium">6. Обучаемость и дебрифинг (L)</span><span id="val_L" class="font-bold text-indigo-400 text-sm">4.0</span></div>
+                <input type="range" id="slider_L" min="1" max="5" step="0.1" value="4.0" class="w-full accent-indigo-500 cursor-pointer">
+              </div>
+            </div>
+          </div>
+
+          <!-- Modifiers and Penalties -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-700/60 space-y-1.5">
+              <span class="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">Бонусы условий смены</span>
+              <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+                <input type="checkbox" id="modSolo" class="rounded bg-slate-800 border-slate-700 text-indigo-600">
+                Один на отряде / один на направлении (+0.30)
+              </label>
+              <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+                <input type="checkbox" id="modHardAge" class="rounded bg-slate-800 border-slate-700 text-indigo-600">
+                Сложный контингент / трудные подростки (+0.20)
+              </label>
+              <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+                <input type="checkbox" id="modSaveCamp" class="rounded bg-slate-800 border-slate-700 text-indigo-600">
+                Спасение вечернего дела / ключевая инициатива (+0.20)
+              </label>
+            </div>
+
+            <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-700/60 space-y-1.5">
+              <span class="text-[11px] font-bold text-rose-400 uppercase tracking-wider">Штрафы и фильтр безопасности</span>
+              <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+                <input type="checkbox" id="penLate" class="rounded bg-slate-800 border-slate-700 text-rose-600">
+                Опоздания на планёрки / летучки (-0.30)
+              </label>
+              <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+                <input type="checkbox" id="penDisrupt" class="rounded bg-slate-800 border-slate-700 text-rose-600">
+                Сорванный отбой / шум после тишины (-0.40)
+              </label>
+              <label class="flex items-center gap-2 text-xs text-rose-300 font-bold bg-rose-950/60 p-1.5 rounded-lg border border-rose-800/80 cursor-pointer">
+                <input type="checkbox" id="stopFactor" class="rounded bg-slate-800 border-rose-500 text-rose-600">
+                СТОП-ФАКТОР (Алкоголь, грубое ТБ, насилие) → K = 0
+              </label>
+            </div>
+          </div>
+
+          <!-- Wizard Result Bar -->
+          <div class="p-3.5 rounded-xl bg-gradient-to-r from-slate-900 to-indigo-950 border border-indigo-800/40 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="text-[10px] text-slate-400 uppercase font-semibold">Итог за этот слёт:</div>
+              <div class="text-2xl sm:text-3xl font-black text-white flex items-baseline gap-2">
+                <span id="wizardKResult">4.08</span>
+                <span id="wizardKBadge" class="text-xs px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-semibold border border-indigo-500/30">Основа команды</span>
+              </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+              <button type="button" id="deleteCurrentEvalBtn" class="hidden px-3.5 py-2.5 bg-rose-950/70 hover:bg-rose-900 text-rose-300 border border-rose-800/60 rounded-xl font-bold transition flex items-center gap-1.5 text-xs sm:text-sm">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">Удалить оценку</span>
+              </button>
+              <button type="submit" id="saveEvalSubmitBtn" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold shadow-lg shadow-emerald-950/50 transition flex items-center gap-2 text-xs sm:text-sm">
+                <i data-lucide="check-circle" class="w-4 h-4"></i> Сохранить
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: STAFF DOSSIER -->
+  <div id="dossierModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 hidden">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-3xl w-full flex flex-col max-h-[94vh] shadow-2xl overflow-hidden">
+      <div class="flex justify-between items-center px-4 sm:px-6 py-3.5 border-b border-slate-700 bg-slate-800 flex-shrink-0 z-10">
+        <div>
+          <h3 class="text-base sm:text-xl font-bold text-white flex items-center gap-2" id="dosName">Досье сотрудника</h3>
+          <p class="text-xs text-slate-400" id="dosMeta">История смен и динамика компетенций</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="window.print()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 no-print">
+            <i data-lucide="printer" class="w-4 h-4"></i> <span class="hidden sm:inline">Печать</span>
+          </button>
+          <button id="btnCloseDossierModal" class="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white transition no-print">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="overflow-y-auto touch-scroll p-4 sm:p-6 space-y-5 flex-1">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+          <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-700/60 text-center">
+            <div class="text-[10px] text-slate-400 uppercase font-semibold">Педагогический K</div>
+            <div class="text-xl sm:text-2xl font-black text-indigo-400 mt-0.5" id="dosPedK">—</div>
+          </div>
+          <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-700/60 text-center">
+            <div class="text-[10px] text-purple-400 uppercase font-semibold">Организаторский K</div>
+            <div class="text-xl sm:text-2xl font-black text-purple-400 mt-0.5" id="dosOrgK">—</div>
+          </div>
+          <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-700/60 text-center">
+            <div class="text-[10px] text-amber-400 uppercase font-semibold">Технический K</div>
+            <div class="text-xl sm:text-2xl font-black text-amber-400 mt-0.5" id="dosTechK">—</div>
+          </div>
+          <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-700/60 text-center">
+            <div class="text-[10px] text-slate-300 uppercase font-semibold">Общий K-Индекс</div>
+            <div class="text-xl sm:text-2xl font-black text-white mt-0.5" id="dosTotalK">—</div>
+            <div class="text-[10px] font-bold" id="dosCategoryBadge">Категория</div>
+          </div>
+        </div>
+
+        <div class="bg-slate-900/50 border border-slate-700/60 p-4 rounded-xl">
+          <div class="text-xs font-bold text-slate-300 uppercase mb-2">Профиль 6 векторов (Среднее по всем слётам)</div>
+          <div class="h-60 sm:h-64 flex items-center justify-center">
+            <canvas id="radarChart"></canvas>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <div class="text-xs font-bold text-slate-300 uppercase">История участий и оценок по слётам</div>
+          <div id="dosCampsHistory" class="space-y-2"></div>
+        </div>
+
+        <div class="p-3.5 rounded-xl bg-slate-900/80 border border-slate-700 space-y-1">
+          <div class="text-xs font-bold text-indigo-300 uppercase flex items-center gap-1.5">
+            <i data-lucide="message-square" class="w-4 h-4"></i> Готовый скрипт для дебрифинга 1-на-1
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed" id="dosDebriefScript"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CAMP DOSSIER -->
+  <div id="campDossierModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 hidden">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-3xl w-full flex flex-col max-h-[94vh] shadow-2xl overflow-hidden">
+      <div class="flex justify-between items-center px-4 sm:px-6 py-3.5 border-b border-slate-700 bg-slate-800 flex-shrink-0 z-10">
+        <div>
+          <h3 class="text-base sm:text-xl font-bold text-white flex items-center gap-2" id="campDosTitle">
+            <i data-lucide="tent" class="text-indigo-400 w-5 h-5"></i> Досье слёта
+          </h3>
+          <p class="text-xs text-slate-400" id="campDosMeta"></p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="window.print()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 no-print">
+            <i data-lucide="printer" class="w-4 h-4"></i> <span class="hidden sm:inline">Печать</span>
+          </button>
+          <button id="btnCloseCampDossierModal" class="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white transition no-print">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="overflow-y-auto touch-scroll p-4 sm:p-6 space-y-5 flex-1">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-700/60 text-center">
+            <div class="text-[10px] text-slate-400 uppercase font-semibold">Средний K слёта</div>
+            <div class="text-2xl font-black text-indigo-400 mt-0.5" id="campDosAvgK">—</div>
+          </div>
+          <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-700/60 text-center">
+            <div class="text-[10px] text-slate-400 uppercase font-semibold">В составе</div>
+            <div class="text-2xl font-black text-white mt-0.5" id="campDosRosterCount">0</div>
+          </div>
+          <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-700/60 text-center">
+            <div class="text-[10px] text-emerald-400 uppercase font-semibold">Оценено</div>
+            <div class="text-2xl font-black text-emerald-400 mt-0.5" id="campDosEvaluatedPercent">0%</div>
+          </div>
+          <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-700/60 text-center">
+            <div class="text-[10px] text-amber-400 uppercase font-semibold">Золотой фонд</div>
+            <div class="text-2xl font-black text-amber-300 mt-0.5" id="campDosGoldCount">0</div>
+          </div>
+        </div>
+
+        <div class="bg-slate-900/50 border border-slate-700/60 p-4 rounded-xl">
+          <div class="text-xs font-bold text-slate-300 uppercase mb-2">Командный профиль слёта</div>
+          <div class="h-60 sm:h-64 flex items-center justify-center">
+            <canvas id="campRadarChart"></canvas>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <div class="flex justify-between items-center text-xs font-bold text-slate-300 uppercase">
+            <span>Оценки сотрудников на слёте (по рейтингу)</span>
+            <span id="campDosParticipantsBadge" class="text-indigo-400"></span>
+          </div>
+          <div id="campDosParticipantsList" class="space-y-2"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CAMP ROSTER -->
+  <div id="rosterModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 hidden">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-2xl w-full flex flex-col max-h-[92vh] shadow-2xl overflow-hidden">
+      <div class="flex justify-between items-center px-4 sm:px-6 py-3.5 border-b border-slate-700 bg-slate-800 flex-shrink-0 z-10">
+        <div>
+          <h3 class="text-base sm:text-lg font-bold text-white flex items-center gap-2" id="rosterCampTitle">
+            <i data-lucide="users" class="text-indigo-400 w-5 h-5"></i> Состав команды слёта
+          </h3>
+          <p class="text-xs text-slate-400 mt-0.5" id="rosterCampMeta"></p>
+        </div>
+        <button id="btnCloseRosterModal" class="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="overflow-y-auto touch-scroll p-4 sm:p-6 space-y-4 flex-1">
+        <div class="bg-slate-900/70 p-3.5 rounded-xl border border-slate-700/70 space-y-2">
+          <label class="block text-xs font-semibold text-slate-300">Добавить человека в состав слёта:</label>
+          <div class="flex flex-col sm:flex-row gap-2">
+            <select id="rosterAddStaffSelect" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs sm:text-sm text-slate-100 focus:outline-none focus:border-indigo-500"></select>
+            <button id="btnAddStaffToRoster" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm">
+              <i data-lucide="user-plus" class="w-4 h-4"></i> Включить в состав
             </button>
           </div>
         </div>
 
-        <!-- Список сотрудников (карточки) -->
-        <div id="staffListContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
-      </section>
-
-      <!-- Экран 2: Слёты и смены -->
-      <section id="view-camps" class="hidden space-y-4">
-        <div class="flex items-center justify-between">
-          <div>
-            <h2 class="text-base font-bold text-white">Выездные слёты и смены</h2>
-            <p class="text-xs text-slate-400">Формирование составов, дат и распределение пар</p>
+        <div class="flex flex-wrap items-center justify-between gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider pb-1">
+          <div class="flex items-center gap-2">
+            <button id="btnOpenPairingFromRoster" class="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-indigo-600 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Сформировать пары
+            </button>
+            <span id="rosterCountBadge" class="text-indigo-400 font-semibold lowercase">0 человек</span>
           </div>
-          <button id="btnOpenAddCamp" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-indigo-950">
-            <i data-lucide="plus" class="w-4 h-4"></i>
-            <span>Новый слёт</span>
+          
+          <div class="flex items-center gap-1.5">
+            <span class="text-[11px] font-normal normal-case text-slate-400">Сортировка:</span>
+            <select id="rosterSortSelect" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-[11px] text-slate-200 focus:outline-none focus:border-indigo-500 font-medium">
+              <option value="k_desc">По рейтингу K (высшие)</option>
+              <option value="k_asc">По рейтингу K (низшие)</option>
+              <option value="name_asc">По алфавиту (А → Я)</option>
+              <option value="pending_first">Сначала неоцененные</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="rosterStaffList" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: SMART PAIRING -->
+  <div id="pairingModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 hidden">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-3xl w-full flex flex-col max-h-[94vh] shadow-2xl overflow-hidden">
+      <div class="flex justify-between items-center px-4 sm:px-6 py-3.5 border-b border-slate-700 bg-slate-800 flex-shrink-0 z-10">
+        <div>
+          <h3 class="text-base sm:text-lg font-bold text-white flex items-center gap-2" id="pairingModalTitle">
+            <i data-lucide="sparkles" class="text-amber-400 w-5 h-5"></i> Умный подбор пар напарников
+          </h3>
+          <p class="text-xs text-slate-400">Балансировка опыта (Золотой фонд + Новички) и компенсация сильных/слабых сторон</p>
+        </div>
+        <button id="btnClosePairingModal" class="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="overflow-y-auto touch-scroll p-4 sm:p-6 space-y-4 flex-1">
+        <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-900/60 p-3 rounded-xl border border-slate-700 text-xs">
+          <span class="text-slate-300">Нажмите «Пересчитать связки», чтобы алгоритм подобрал оптимальное распределение.</span>
+          <button id="btnRegeneratePairs" class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold transition flex items-center gap-1.5 shadow-sm">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Пересчитать связки
           </button>
         </div>
 
-        <div id="campsListContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3.5"></div>
-      </section>
+        <div id="pairingCardsContainer" class="space-y-3"></div>
+      </div>
 
-    </main>
-
-    <!-- Нижняя мобильная панель навигации (Bottom Navigation) -->
-    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur border-t border-slate-800/80 px-6 py-2 flex items-center justify-around z-40">
-      <button onclick="window.switchTab('registry')" id="bottomNavRegistry" class="flex flex-col items-center gap-1 text-indigo-400 font-semibold text-[10px]">
-        <i data-lucide="users" class="w-5 h-5"></i>
-        <span>Команда</span>
-      </button>
-      <button onclick="window.openEvaluationModal()" class="w-12 h-12 -mt-5 bg-gradient-to-tr from-amber-500 to-indigo-600 rounded-full flex items-center justify-center text-white shadow-lg shadow-indigo-950">
-        <i data-lucide="award" class="w-6 h-6"></i>
-      </button>
-      <button onclick="window.switchTab('camps')" id="bottomNavCamps" class="flex flex-col items-center gap-1 text-slate-400 hover:text-white text-[10px]">
-        <i data-lucide="tent" class="w-5 h-5"></i>
-        <span>Слёты</span>
-      </button>
-    </nav>
+      <div class="px-4 sm:px-6 py-3 border-t border-slate-700 bg-slate-800 flex justify-end gap-2">
+        <button id="btnCancelPairing" class="px-4 py-2 bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold">Закрыть</button>
+        <button id="btnSavePairing" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1.5">
+          <i data-lucide="check" class="w-4 h-4"></i> Сохранить пары в слёт
+        </button>
+      </div>
+    </div>
   </div>
 
-  <!-- Модальные окна (подгружаются через модули) -->
-  <div id="modalContainer"></div>
+  <!-- MODAL: QR CODE 360 -->
+  <div id="qrModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 hidden">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-sm w-full p-5 sm:p-6 space-y-4 shadow-2xl text-center">
+      <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+        <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="qr-code" class="text-indigo-400 w-5 h-5"></i> Сбор обратной связи 360°
+        </h3>
+        <button id="btnCloseQrModal" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
 
-  <!-- Точка входа в систему (ES Module) -->
+      <div class="text-xs text-slate-300">
+        Вожатый: <span class="font-bold text-white" id="qrStaffName">—</span>
+      </div>
+
+      <div class="flex rounded-lg bg-slate-900 p-1 border border-slate-700 text-xs">
+        <button type="button" id="qrBtnTypePartner" class="flex-1 py-1.5 rounded-md font-semibold transition bg-indigo-600 text-white">Для напарника</button>
+        <button type="button" id="qrBtnTypeSquad" class="flex-1 py-1.5 rounded-md font-semibold transition text-slate-400 hover:text-white">Для отряда / детей</button>
+      </div>
+
+      <div class="flex justify-center p-3 bg-white rounded-2xl max-w-[210px] mx-auto shadow-inner">
+        <div id="qrcodeCanvas"></div>
+      </div>
+
+      <p class="text-[11px] text-slate-400 leading-tight">
+        Отсканируйте камерой телефона для заполнения анкеты без входа в систему.
+      </p>
+
+      <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-700 text-xs">
+        <button id="btnCopyQrLink" class="py-2 px-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg font-semibold flex items-center justify-center gap-1.5">
+          <i data-lucide="copy" class="w-3.5 h-3.5"></i> Скопировать
+        </button>
+        <button id="btnOpenSurveyDevice" class="py-2 px-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-semibold flex items-center justify-center gap-1.5">
+          <i data-lucide="smartphone" class="w-3.5 h-3.5"></i> Передать тел.
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD / EDIT STAFF -->
+  <div id="staffModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 hidden">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-xl">
+      <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+        <h3 class="text-base sm:text-lg font-bold text-white" id="staffModalTitle">Добавить сотрудника</h3>
+        <button id="btnCloseStaffModal" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="bg-indigo-950/40 border border-indigo-500/30 rounded-xl p-2.5 flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2 text-xs text-indigo-200">
+          <i data-lucide="contact" class="w-4 h-4 text-indigo-400 flex-shrink-0"></i>
+          <span>Заполнить из записной книжки</span>
+        </div>
+        <button type="button" id="btnPickContacts" class="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+          <i data-lucide="phone-call" class="w-3.5 h-3.5"></i> Выбрать
+        </button>
+        <input type="file" id="vcfContactInput" accept=".vcf,text/vcard,text/x-vcard" class="hidden">
+      </div>
+
+      <form id="staffForm" class="space-y-3.5">
+        <input type="hidden" id="staffEditId" value="">
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">ФИО *</label>
+          <input type="text" id="staffNameInput" name="name" autocomplete="name" required placeholder="Иванов Алексей" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Вожатский позывной / никнейм</label>
+          <input type="text" id="staffNicknameInput" placeholder="Лёха / Капитан" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Основная специализация</label>
+          <select id="staffPrimaryRoleInput" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Телефон / Контакт</label>
+          <input type="tel" id="staffContactInput" name="tel" autocomplete="tel" placeholder="+7 999 123-45-67 или @username" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500">
+        </div>
+        <div class="flex justify-end gap-2 pt-2 border-t border-slate-700">
+          <button type="button" id="btnCancelStaffModal" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-xs font-medium">Отмена</button>
+          <button type="submit" id="staffModalSubmitBtn" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold">Сохранить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD / EDIT CAMP -->
+  <div id="campModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 hidden">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-xl">
+      <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+        <h3 class="text-base sm:text-lg font-bold text-white" id="campModalTitle">Создать слёт</h3>
+        <button id="btnCloseCampModal" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <form id="campForm" class="space-y-3.5">
+        <input type="hidden" id="campEditId" value="">
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Название слёта / смены *</label>
+          <input type="text" id="campNameInput" required placeholder="Осенний лидерский слёт 2026" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">База / Локация</label>
+          <input type="text" id="campLocationInput" placeholder="ДОЛ «Лесной»" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500">
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Дата начала *</label>
+            <input type="date" id="campStartDateInput" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Дата окончания *</label>
+            <input type="date" id="campEndDateInput" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500">
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 pt-2 border-t border-slate-700">
+          <button type="button" id="btnCancelCampModal" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-xs font-medium">Отмена</button>
+          <button type="submit" id="campModalSubmitBtn" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold">Сохранить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CONFIRM DIALOG -->
+  <div id="confirmModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-[9990] flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-rose-950/60 text-rose-400 border border-rose-800/60 flex items-center justify-center flex-shrink-0 font-bold">
+          <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h4 class="text-base font-bold text-white" id="confirmModalTitle">Подтвердите действие</h4>
+          <p class="text-xs text-slate-400 mt-0.5" id="confirmModalMessage">Вы уверены?</p>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-2 border-t border-slate-700/60">
+        <button type="button" id="btnCancelConfirm" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-xs font-medium">Отмена</button>
+        <button type="button" id="confirmModalActionBtn" class="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold transition">Подтвердить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Подключение главного ES6-модуля -->
   <script type="module" src="js/app.js"></script>
 </body>
 </html>

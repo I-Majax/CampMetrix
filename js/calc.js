@@ -1,102 +1,194 @@
 import { state } from './db.js';
 import { ROLE_WEIGHTS } from './config.js';
 
-// Расчет накопительного K и тренда для сотрудника
-export function calculateStaffMetrics(staffId) {
-  const staffEvals = state.evaluations.filter(e => e.staffId === staffId);
-  
-  if (!staffEvals.length) {
-    return { overallK: 0, count: 0, trend: '—', isStop: false, pedK: null, orgK: null, techK: null };
+export function formatCampDateRange(camp) {
+  if (!camp) return 'Даты не указаны';
+
+  if (camp.startDate && camp.endDate) {
+    const s = new Date(camp.startDate);
+    const e = new Date(camp.endDate);
+    if (!isNaN(s.getTime()) && !isNaN(e.getTime())) {
+      const sDay = s.getDate();
+      const eDay = e.getDate();
+      const sMonth = s.toLocaleDateString('ru-RU', { month: 'short' });
+      const eMonth = e.toLocaleDateString('ru-RU', { month: 'short' });
+      const sYear = s.getFullYear();
+      const eYear = e.getFullYear();
+
+      if (sYear === eYear && sMonth === eMonth) {
+        return `${sDay}–${eDay} ${eMonth} ${sYear}`;
+      } else if (sYear === eYear) {
+        return `${sDay} ${sMonth} – ${eDay} ${eMonth} ${eYear}`;
+      } else {
+        return `${s.toLocaleDateString('ru-RU')} – ${e.toLocaleDateString('ru-RU')}`;
+      }
+    }
+  } else if (camp.startDate) {
+    const s = new Date(camp.startDate);
+    if (!isNaN(s.getTime())) return `с ${s.toLocaleDateString('ru-RU')}`;
   }
+  return camp.dates || 'Даты не указаны';
+}
 
-  // Сортировка по времени проведения слёта
-  staffEvals.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+export function getCampEvaluations(campId) {
+  const camp = state.camps.find(c => c.id === campId);
+  const roster = Array.isArray(camp?.roster) ? camp.roster : [];
+  const evals = state.evaluations.filter(e => e.campId === campId);
 
-  let isStop = false;
-  const ped = [];
-  const org = [];
-  const tech = [];
+  const validMap = new Map();
+  evals.forEach(ev => {
+    const staffExists = state.staff.some(s => s.id === ev.staffId);
+    const inRoster = roster.length === 0 || roster.includes(ev.staffId);
+    if (staffExists && inRoster) {
+      if (!validMap.has(ev.staffId) || (ev.timestamp || 0) > (validMap.get(ev.staffId).timestamp || 0)) {
+        validMap.set(ev.staffId, ev);
+      }
+    }
+  });
+  return Array.from(validMap.values());
+}
 
-  staffEvals.forEach(e => {
-    if (e.finalScore === 0 || e.isStop) isStop = true;
-    const type = ROLE_WEIGHTS[e.role]?.type || 'ped';
-    if (type === 'ped') ped.push(e.finalScore);
-    else if (type === 'org') org.push(e.finalScore);
-    else tech.push(e.finalScore);
+export function calculateStaffMultiCampK(staffId) {
+  const rawEvals = state.evaluations.filter(e => e.staffId === staffId && state.camps.some(c => c.id === e.campId));
+
+  const campEvalMap = new Map();
+  rawEvals.forEach(ev => {
+    const camp = state.camps.find(c => c.id === ev.campId);
+    const roster = Array.isArray(camp?.roster) ? camp.roster : [];
+    const inRoster = roster.length === 0 || roster.includes(staffId);
+    if (inRoster) {
+      if (!campEvalMap.has(ev.campId) || (ev.timestamp || 0) > (campEvalMap.get(ev.campId).timestamp || 0)) {
+        campEvalMap.set(ev.campId, ev);
+      }
+    }
   });
 
-  const calcWeighted = (arr) => {
-    if (!arr.length) return null;
-    let sum = 0, weightTotal = 0;
-    arr.forEach((val, idx) => {
-      const w = 1 + (idx * 0.15); // Чем свежее слёт, тем выше вес
-      sum += val * w;
-      weightTotal += w;
+  const evals = Array.from(campEvalMap.values());
+
+  if (evals.length === 0) {
+    return {
+      overallK: 0,
+      pedK: null,
+      orgK: null,
+      techK: null,
+      trend: '—',
+      count: 0,
+      isStopListed: false,
+      avgVectors: { D: 0, A: 0, S: 0, T: 0, F: 0, L: 0 }
+    };
+  }
+
+  evals.sort((a, b) => {
+    const campA = state.camps.find(c => c.id === a.campId);
+    const campB = state.camps.find(c => c.id === b.campId);
+    const timeA = (campA && campA.startDate) ? new Date(campA.startDate).getTime() : (a.timestamp || 0);
+    const timeB = (campB && campB.startDate) ? new Date(campB.startDate).getTime() : (b.timestamp || 0);
+    return timeA - timeB;
+  });
+
+  let isStopListed = false;
+  const pedScores = [];
+  const orgScores = [];
+  const techScores = [];
+  const vectorSums = { D: 0, A: 0, S: 0, T: 0, F: 0, L: 0 };
+
+  evals.forEach(ev => {
+    if (ev.finalScore === 0 || ev.isStop) isStopListed = true;
+    const roleType = ROLE_WEIGHTS[ev.role]?.type || 'ped';
+    if (roleType === 'ped') pedScores.push(ev.finalScore);
+    else if (roleType === 'org') orgScores.push(ev.finalScore);
+    else techScores.push(ev.finalScore);
+
+    if (ev.vectors) {
+      for (let k in vectorSums) {
+        vectorSums[k] += (Number(ev.vectors[k]) || 4.0);
+      }
+    }
+  });
+
+  const calcWeightedK = (scores) => {
+    if (!scores.length) return null;
+    let totalW = 0;
+    let weightedSum = 0;
+    scores.forEach((s, idx) => {
+      const w = 1.0 + (idx * 0.15);
+      weightedSum += s * w;
+      totalW += w;
     });
-    return parseFloat((sum / weightTotal).toFixed(2));
+    return totalW > 0 ? parseFloat((weightedSum / totalW).toFixed(2)) : null;
   };
 
-  const overallK = isStop ? 0.00 : calcWeighted(staffEvals.map(e => e.finalScore));
+  const pedK = calcWeightedK(pedScores);
+  const orgK = calcWeightedK(orgScores);
+  const techK = calcWeightedK(techScores);
 
-  // Тренд эффективности
+  let overallK = 0;
+  if (isStopListed) {
+    overallK = 0.00;
+  } else {
+    let totalW = 0;
+    let weightedSum = 0;
+    evals.forEach((ev, idx) => {
+      const w = 1.0 + (idx * 0.15);
+      weightedSum += ev.finalScore * w;
+      totalW += w;
+    });
+    overallK = totalW > 0 ? parseFloat((weightedSum / totalW).toFixed(2)) : 0;
+  }
+
   let trend = '—';
-  if (staffEvals.length >= 2) {
-    const diff = staffEvals[staffEvals.length - 1].finalScore - staffEvals[staffEvals.length - 2].finalScore;
-    if (diff >= 0.15) trend = `↗ +${diff.toFixed(2)}`;
-    else if (diff <= -0.15) trend = `↘ ${diff.toFixed(2)}`;
+  if (evals.length >= 2) {
+    const latestScore = evals[evals.length - 1].finalScore;
+    const prevScore = evals[evals.length - 2].finalScore;
+    const delta = parseFloat((latestScore - prevScore).toFixed(2));
+    if (delta >= 0.15) trend = `↗ +${delta}`;
+    else if (delta <= -0.15) trend = `↘ ${delta}`;
     else trend = '→ Стабильно';
+  }
+
+  const avgVectors = {};
+  for (let k in vectorSums) {
+    avgVectors[k] = parseFloat((vectorSums[k] / evals.length).toFixed(1));
   }
 
   return {
     overallK,
-    count: staffEvals.length,
+    pedK,
+    orgK,
+    techK,
     trend,
-    isStop,
-    pedK: calcWeighted(ped),
-    orgK: calcWeighted(org),
-    techK: calcWeighted(tech)
+    count: evals.length,
+    isStopListed,
+    avgVectors
   };
 }
 
-// Умный алгоритм подбора пар напарников
-export function autoPairCounselors(campId) {
-  const camp = state.camps.find(c => c.id === campId);
-  if (!camp || !camp.roster) return [];
-
-  const candidates = state.staff
-    .filter(s => camp.roster.includes(s.id) && ['counselor', 'trainee', 'lead'].includes(s.primaryRole))
-    .map(s => ({ ...s, metrics: calculateStaffMetrics(s.id) }));
-
-  // Пул опытных и начинающих
-  const seniors = candidates.filter(c => c.metrics.overallK >= 4.0 || c.metrics.count >= 2);
-  const juniors = candidates.filter(c => !seniors.includes(c));
-
-  seniors.sort((a, b) => b.metrics.overallK - a.metrics.overallK);
-  juniors.sort((a, b) => a.metrics.overallK - b.metrics.overallK);
-
-  const pairs = [];
-  while (seniors.length && juniors.length) {
-    const s = seniors.shift();
-    const j = juniors.shift();
-    pairs.push({
-      lead: s,
-      partner: j,
-      compatibility: 95,
-      note: "Идеальный баланс: Опытный наставник + Стажёр"
-    });
+export function getCategoryBadge(m) {
+  if (m.isStopListed) {
+    return { label: 'Стоп-лист', class: 'bg-rose-950/80 text-rose-300 border border-rose-600/50' };
   }
-
-  const remaining = [...seniors, ...juniors];
-  for (let i = 0; i < remaining.length; i += 2) {
-    if (i + 1 < remaining.length) {
-      pairs.push({
-        lead: remaining[i],
-        partner: remaining[i + 1],
-        compatibility: 80,
-        note: "Рабочая связка"
-      });
-    }
+  if (m.count === 0) {
+    return { label: 'Новичок', class: 'bg-slate-700/80 text-slate-300 border border-slate-600' };
   }
+  if (m.overallK >= 4.3) {
+    return { label: 'Золотой фонд', class: 'bg-amber-950/80 text-amber-300 border border-amber-500/50' };
+  }
+  if (m.overallK >= 3.6) {
+    return { label: 'Основа', class: 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/50' };
+  }
+  return { label: 'Зона риска', class: 'bg-rose-950/80 text-rose-300 border border-rose-500/50' };
+}
 
-  return pairs;
+export function getStrongestVector(v) {
+  const names = { D: 'дисциплина и тайминг', A: 'работа с залом и детьми', S: 'техника безопасности', T: 'командная выручка', F: 'стрессоустойчивость', L: 'обучаемость' };
+  let maxK = 'D';
+  for (let k in v) { if (v[k] > v[maxK]) maxK = k; }
+  return names[maxK];
+}
+
+export function getWeakestVector(v) {
+  const names = { D: 'контроле тайминга', A: 'вовлечении неактивных детей', S: 'бдительности по ТБ', T: 'коммуникации в штабе', F: 'реакции на форс-мажоры', L: 'исправлении правок' };
+  let minK = 'D';
+  for (let k in v) { if (v[k] < v[minK]) minK = k; }
+  return names[minK];
 }

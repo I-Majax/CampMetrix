@@ -1,4 +1,3 @@
-// Конфигурация Firebase
 export const FIREBASE_CONFIG = {
   apiKey: "AIzaSyCCVxogvgq3ly3gQ9rPKsvhV1m38faHZyU",
   authDomain: "campmetrix-web.firebaseapp.com",
@@ -8,7 +7,6 @@ export const FIREBASE_CONFIG = {
   appId: "1:239092051588:web:d0f31f9c45f0ea5ed55cd1"
 };
 
-// Роли и адаптивные веса векторов
 export const ROLE_WEIGHTS = {
   trainee:   { D: 0.25, A: 0.15, S: 0.20, T: 0.15, F: 0.05, L: 0.20, label: "Стажёр", type: "ped" },
   counselor: { D: 0.15, A: 0.30, S: 0.25, T: 0.15, F: 0.10, L: 0.05, label: "Линейный вожатый", type: "ped" },
