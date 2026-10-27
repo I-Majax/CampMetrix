@@ -2430,4 +2430,678 @@
         badge.className = "text-[10px] text-emerald-400 font-bold";
       } else {
         badge.textContent = "Зона риска";
-        badge.className =
+        badge.className = "text-[10px] text-rose-400 font-bold";
+      }
+
+      const userEvals = evaluationsList.filter(e => e.staffId === staffId && campsList.some(c => c.id === e.campId));
+      userEvals.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+      const histDiv = document.getElementById('dosCampsHistory');
+      histDiv.innerHTML = '';
+      if (userEvals.length === 0) {
+        histDiv.innerHTML = '<div class="text-xs text-slate-500 p-3 bg-slate-900/40 rounded-lg border border-slate-800">Нет сохранённых оценок со слётов.</div>';
+      } else {
+        userEvals.forEach(ev => {
+          const c = campsList.find(camp => camp.id === ev.campId) || { name: 'Слёт #' + ev.campId };
+          const item = document.createElement('div');
+          item.className = 'flex items-center justify-between p-2.5 rounded-lg bg-slate-900/70 text-xs border border-slate-700/60';
+          item.innerHTML = `
+            <div>
+              <div class="font-bold text-white">${c.name}</div>
+              <div class="text-slate-400">${ROLE_WEIGHTS[ev.role]?.label || ev.role} • ${formatCampDateRange(c)}</div>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="font-black text-sm ${ev.finalScore >= 4.3 ? 'text-amber-400' : (ev.finalScore >= 3.6 ? 'text-emerald-400' : 'text-rose-400')}">
+                K = ${ev.finalScore.toFixed(2)}
+              </span>
+              <button onclick="closeDossierModal(); startEvaluationFlow('${ev.campId}', '${staffId}');" class="p-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300" title="Изменить оценку">
+                <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+              </button>
+              <button onclick="deleteEvaluation('${ev.id}')" class="p-1 rounded bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800/40" title="Удалить оценку">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          `;
+          histDiv.appendChild(item);
+        });
+      }
+
+      const scriptBox = document.getElementById('dosDebriefScript');
+      if (m.isStopListed) {
+        scriptBox.innerHTML = `«Сотрудник дисквалифицирован за критическое нарушение безопасности/дисциплины. Допуск на следующие смены закрыт.»`;
+      } else if (m.count === 0) {
+        scriptBox.innerHTML = `«Новичок в штабе. Рекомендуется ставить в пару к опытному вожатому из "Золотого фонда" для адаптации.»`;
+      } else {
+        scriptBox.innerHTML = `«Привет! Спасибо за отдачу. Твой общий коэффициент — <b>${m.overallK}</b> (${badge.textContent}). Твоя ведущая суперсила — <b>${getStrongestVector(m.avgVectors)}</b>. На следующем слёте сделай акцент на <b>${getWeakestVector(m.avgVectors)}</b>.»`;
+      }
+
+      renderRadar(m.avgVectors);
+      document.getElementById('dossierModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeDossierModal() {
+      if (radarChartInstance) {
+        radarChartInstance.destroy();
+        radarChartInstance = null;
+      }
+      document.getElementById('dossierModal').classList.add('hidden');
+    }
+
+    function getStrongestVector(v) {
+      const names = { D: 'дисциплина и тайминг', A: 'работа с залом и детьми', S: 'техника безопасности', T: 'командная выручка', F: 'стрессоустойчивость', L: 'обучаемость' };
+      let maxK = 'D';
+      for (let k in v) { if (v[k] > v[maxK]) maxK = k; }
+      return names[maxK];
+    }
+
+    function getWeakestVector(v) {
+      const names = { D: 'контроле тайминга', A: 'вовлечении неактивных детей', S: 'бдительности по ТБ', T: 'коммуникации в штабе', F: 'реакции на форс-мажоры', L: 'исправлении правок' };
+      let minK = 'D';
+      for (let k in v) { if (v[k] < v[minK]) minK = k; }
+      return names[minK];
+    }
+
+    function renderRadar(v) {
+      const canvas = document.getElementById('radarChart');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (radarChartInstance) radarChartInstance.destroy();
+
+      radarChartInstance = new Chart(ctx, {
+        type: 'radar',
+        data: {
+          labels: ['Дисциплина (D)', 'Аудитория (A)', 'Безопасность (S)', 'Командность (T)', 'Стресс (F)', 'Обучаемость (L)'],
+          datasets: [{
+            label: 'Профиль сотрудника',
+            data: [v.D, v.A, v.S, v.T, v.F, v.L],
+            backgroundColor: 'rgba(99, 102, 241, 0.25)',
+            borderColor: 'rgba(99, 102, 241, 1)',
+            pointBackgroundColor: '#fbbf24',
+            borderWidth: 2
+          }, {
+            label: 'Эталон',
+            data: [4.0, 4.0, 4.5, 4.0, 4.0, 4.0],
+            borderColor: 'rgba(148, 163, 184, 0.35)',
+            borderDash: [4, 4],
+            pointRadius: 0,
+            fill: false
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            r: {
+              min: 1,
+              max: 5,
+              ticks: { stepSize: 1, display: false },
+              grid: { color: 'rgba(255, 255, 255, 0.1)' },
+              angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
+              pointLabels: { color: '#94a3b8', font: { size: 10 } }
+            }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+
+    /* ================= DOSSIER: CAMP ================= */
+    function viewCampDossier(campId) {
+      const camp = campsList.find(c => c.id === campId);
+      if (!camp) return;
+
+      document.getElementById('campDosTitle').innerHTML = `<i data-lucide="tent" class="text-indigo-400 w-5 h-5"></i> ${camp.name}`;
+      document.getElementById('campDosMeta').textContent = `Локация: ${camp.location || '—'} • Даты: ${formatCampDateRange(camp)}`;
+
+      const roster = Array.isArray(camp.roster) ? camp.roster : [];
+      const campEvals = getCampEvaluations(campId);
+      
+      document.getElementById('campDosRosterCount').textContent = roster.length;
+      
+      let avgK = '—';
+      let goldCount = 0;
+      const teamVectors = { D: 0, A: 0, S: 0, T: 0, F: 0, L: 0 };
+
+      if (campEvals.length > 0) {
+        const sum = campEvals.reduce((acc, curr) => acc + curr.finalScore, 0);
+        avgK = (sum / campEvals.length).toFixed(2);
+        goldCount = campEvals.filter(e => e.finalScore >= 4.3).length;
+
+        campEvals.forEach(ev => {
+          if (ev.vectors) {
+            for (let k in teamVectors) teamVectors[k] += (Number(ev.vectors[k]) || 4.0);
+          }
+        });
+        for (let k in teamVectors) teamVectors[k] = parseFloat((teamVectors[k] / campEvals.length).toFixed(1));
+      }
+
+      document.getElementById('campDosAvgK').textContent = avgK;
+      document.getElementById('campDosGoldCount').textContent = goldCount;
+
+      const evalPercent = roster.length > 0 ? Math.round((campEvals.length / roster.length) * 100) : 0;
+      document.getElementById('campDosEvaluatedPercent').textContent = evalPercent + '%';
+      document.getElementById('campDosEvaluatedCount').textContent = `${campEvals.length} из ${roster.length}`;
+      document.getElementById('campDosParticipantsBadge').textContent = `${campEvals.length} оценок`;
+
+      const sortedRoster = [...roster].sort((aId, bId) => {
+        const evA = campEvals.find(e => e.staffId === aId);
+        const evB = campEvals.find(e => e.staffId === bId);
+        const scoreA = evA ? evA.finalScore : -1;
+        const scoreB = evB ? evB.finalScore : -1;
+        return scoreB - scoreA;
+      });
+
+      const listDiv = document.getElementById('campDosParticipantsList');
+      listDiv.innerHTML = '';
+      if (roster.length === 0) {
+        listDiv.innerHTML = '<div class="text-xs text-slate-500 p-3 bg-slate-900/40 rounded-xl">В состав слёта ещё никто не включён.</div>';
+      } else {
+        sortedRoster.forEach(staffId => {
+          const staff = staffList.find(s => s.id === staffId);
+          if (!staff) return;
+          const ev = campEvals.find(e => e.staffId === staffId);
+          const item = document.createElement('div');
+          item.className = 'flex items-center justify-between p-2.5 rounded-xl bg-slate-900/70 border border-slate-700/60 text-xs';
+          
+          let scoreHtml = '';
+          if (ev) {
+            scoreHtml = `
+              <div class="flex items-center gap-2">
+                <span class="font-black text-sm ${ev.finalScore >= 4.3 ? 'text-amber-400' : (ev.finalScore >= 3.6 ? 'text-emerald-400' : 'text-rose-400')}">K = ${ev.finalScore.toFixed(2)}</span>
+                <button onclick="closeCampDossierModal(); startEvaluationFlow('${campId}', '${staffId}');" class="p-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300" title="Изменить оценку">
+                  <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                </button>
+                <button onclick="deleteEvaluation('${ev.id}')" class="p-1 rounded bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800/40" title="Удалить оценку">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            `;
+          } else {
+            scoreHtml = `<button onclick="closeCampDossierModal(); startEvaluationFlow('${campId}', '${staffId}');" class="px-2.5 py-1 rounded bg-indigo-600/30 hover:bg-indigo-600 text-indigo-300 hover:text-white transition font-medium">Оценить</button>`;
+          }
+
+          item.innerHTML = `
+            <div>
+              <div class="font-bold text-white flex items-center gap-1.5">
+                ${staff.name || 'Без имени'} ${staff.nickname ? '«'+staff.nickname+'»' : ''}
+              </div>
+              <div class="text-[11px] text-slate-400">${ROLE_WEIGHTS[staff.primaryRole]?.label || staff.primaryRole}</div>
+            </div>
+            <div>${scoreHtml}</div>
+          `;
+          listDiv.appendChild(item);
+        });
+      }
+
+      renderCampRadar(teamVectors);
+      document.getElementById('campDossierModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeCampDossierModal() {
+      if (campRadarChartInstance) {
+        campRadarChartInstance.destroy();
+        campRadarChartInstance = null;
+      }
+      document.getElementById('campDossierModal').classList.add('hidden');
+    }
+
+    /* ================= ROSTER MANAGEMENT ================= */
+    function openRosterModal(campId) {
+      activeRosterCampId = campId;
+      renderRosterModalContent(campId);
+      document.getElementById('rosterModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeRosterModal() {
+      activeRosterCampId = null;
+      document.getElementById('rosterModal').classList.add('hidden');
+    }
+
+    function renderRosterModalContent(campId) {
+      const camp = campsList.find(c => c.id === campId);
+      if (!camp) return;
+
+      document.getElementById('rosterCampTitle').innerHTML = `<i data-lucide="users" class="text-indigo-400 w-5 h-5"></i> ${camp.name}`;
+      document.getElementById('rosterCampMeta').textContent = `Локация: ${camp.location || '—'} • Даты: ${formatCampDateRange(camp)}`;
+
+      const roster = Array.isArray(camp.roster) ? camp.roster : [];
+      document.getElementById('rosterCountBadge').textContent = `${roster.length} человек`;
+
+      const select = document.getElementById('rosterAddStaffSelect');
+      const available = staffList.filter(s => !roster.includes(s.id));
+      if (available.length === 0) {
+        select.innerHTML = '<option value="" disabled selected>Все люди из реестра уже добавлены</option>';
+      } else {
+        select.innerHTML = '<option value="" disabled selected>Выберите человека из реестра...</option>' +
+          available.map(s => `<option value="${s.id}">${s.name || 'Без имени'} ${s.nickname ? '«'+s.nickname+'»' : ''}</option>`).join('');
+      }
+
+      const listContainer = document.getElementById('rosterStaffList');
+      listContainer.innerHTML = '';
+
+      if (roster.length === 0) {
+        listContainer.innerHTML = '<div class="p-6 text-center text-xs text-slate-500 bg-slate-900/40 rounded-xl">В этот слёт пока никто не записан.</div>';
+        return;
+      }
+
+      const sortMode = document.getElementById('rosterSortSelect')?.value || 'k_desc';
+      const sortedRoster = [...roster].sort((aId, bId) => {
+        const staffA = staffList.find(s => s.id === aId);
+        const staffB = staffList.find(s => s.id === bId);
+        const evA = evaluationsList.find(e => e.campId === campId && e.staffId === aId);
+        const evB = evaluationsList.find(e => e.campId === campId && e.staffId === bId);
+        
+        const hasScoreA = evA !== undefined;
+        const hasScoreB = evB !== undefined;
+        const scoreA = evA ? evA.finalScore : -1;
+        const scoreB = evB ? evB.finalScore : -1;
+
+        if (sortMode === 'k_desc') {
+          if (hasScoreA && hasScoreB) return scoreB - scoreA;
+          if (hasScoreA) return -1;
+          if (hasScoreB) return 1;
+          return (staffA?.name || '').localeCompare(staffB?.name || '', 'ru');
+        } else if (sortMode === 'k_asc') {
+          if (hasScoreA && hasScoreB) return scoreA - scoreB;
+          if (hasScoreA) return -1;
+          if (hasScoreB) return 1;
+          return (staffA?.name || '').localeCompare(staffB?.name || '', 'ru');
+        } else if (sortMode === 'pending_first') {
+          if (!hasScoreA && hasScoreB) return -1;
+          if (hasScoreA && !hasScoreB) return 1;
+          return (staffA?.name || '').localeCompare(staffB?.name || '', 'ru');
+        } else {
+          return (staffA?.name || '').localeCompare(staffB?.name || '', 'ru');
+        }
+      });
+
+      sortedRoster.forEach(staffId => {
+        const staff = staffList.find(s => s.id === staffId);
+        if (!staff) return;
+
+        const ev = evaluationsList.find(e => e.campId === campId && e.staffId === staffId);
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-900/60 border border-slate-700/60';
+
+        let evalBadge = '';
+        if (ev) {
+          evalBadge = `<span class="text-xs px-2 py-0.5 rounded font-black ${ev.finalScore >= 4.3 ? 'bg-amber-950/80 text-amber-300' : (ev.finalScore >= 3.6 ? 'bg-emerald-950/80 text-emerald-300' : 'bg-rose-950/80 text-rose-300')}">K = ${ev.finalScore.toFixed(2)}</span>`;
+        } else {
+          evalBadge = `<span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400">Ожидает</span>`;
+        }
+
+        item.innerHTML = `
+          <div>
+            <div class="font-bold text-xs sm:text-sm text-white">${staff.name || 'Без имени'}</div>
+            <div class="text-[11px] text-slate-400">${ROLE_WEIGHTS[staff.primaryRole]?.label || staff.primaryRole}</div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            ${evalBadge}
+            <!-- QR 360 link button -->
+            <button onclick="openQrModal('${campId}', '${staff.id}')" class="p-1.5 rounded-lg bg-purple-950/60 hover:bg-purple-900 text-purple-300 border border-purple-800/40 transition" title="QR-код для отзыва 360°">
+              <i data-lucide="qr-code" class="w-3.5 h-3.5"></i>
+            </button>
+            <button onclick="closeRosterModal(); startEvaluationFlow('${campId}', '${staff.id}');" class="p-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 transition" title="Оценить / Изменить">
+              <i data-lucide="award" class="w-3.5 h-3.5"></i>
+            </button>
+            ${ev ? `
+              <button onclick="deleteEvaluation('${ev.id}')" class="p-1.5 rounded-lg bg-amber-950/40 hover:bg-amber-900 text-amber-300 border border-amber-800/40 transition" title="Сбросить оценку за слёт">
+                <i data-lucide="eraser" class="w-3.5 h-3.5"></i>
+              </button>
+            ` : ''}
+            <button onclick="removeStaffFromRoster('${campId}', '${staff.id}')" class="p-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900 text-rose-400 border border-rose-800/40 transition" title="Убрать из слёта">
+              <i data-lucide="user-minus" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        `;
+        listContainer.appendChild(item);
+      });
+      lucide.createIcons();
+    }
+
+    function addSelectedStaffToRoster() {
+      if (!activeRosterCampId) return;
+      const select = document.getElementById('rosterAddStaffSelect');
+      const staffId = select.value;
+      if (!staffId) return;
+
+      const camp = campsList.find(c => c.id === activeRosterCampId);
+      if (!camp) return;
+
+      const current = Array.isArray(camp.roster) ? camp.roster : [];
+      if (!current.includes(staffId)) {
+        camp.roster = [...current, staffId];
+        safeStorageSet('cm_cached_camps', campsList);
+
+        if (db) {
+          db.collection('camps').doc(activeRosterCampId).update({ roster: camp.roster })
+            .then(() => showToast("Сотрудник добавлен в состав слёта", "success"))
+            .catch(err => showToast("Добавлено локально", "info"));
+        } else {
+          showToast("Сотрудник добавлен в состав слёта", "success");
+        }
+        renderRosterModalContent(activeRosterCampId);
+        updateAllViews();
+      }
+    }
+
+    function removeStaffFromRoster(campId, staffId) {
+      const camp = campsList.find(c => c.id === campId);
+      const staff = staffList.find(s => s.id === staffId);
+      if (!camp || !staff) return;
+
+      showConfirmDialog({
+        title: "Исключить из слёта?",
+        message: `Убрать ${staff.name} из состава слёта "${camp.name}"? Оценки этого сотрудника за данный слёт также будут аннулированы.`,
+        confirmText: "Исключить",
+        onConfirm: () => {
+          const current = Array.isArray(camp.roster) ? camp.roster : [];
+          camp.roster = current.filter(id => id !== staffId);
+          safeStorageSet('cm_cached_camps', campsList);
+
+          evaluationsList = evaluationsList.filter(e => !(e.campId === campId && e.staffId === staffId));
+          safeStorageSet('cm_cached_evals', evaluationsList);
+
+          if (db) {
+            db.collection('camps').doc(campId).update({ roster: camp.roster }).catch(e => {});
+            evaluationsList.filter(e => e.campId === campId && e.staffId === staffId).forEach(ev => {
+              db.collection('evaluations').doc(ev.id).delete().catch(e => {});
+            });
+          }
+
+          showToast("Сотрудник исключён из слёта, оценка аннулирована", "info");
+          renderRosterModalContent(campId);
+          updateAllViews();
+        }
+      });
+    }
+
+    /* ================= CRUD STAFF ================= */
+    function openStaffModal(staffId = null) {
+      const modal = document.getElementById('staffModal');
+      const title = document.getElementById('staffModalTitle');
+      const submitBtn = document.getElementById('staffModalSubmitBtn');
+      const editInput = document.getElementById('staffEditId');
+
+      if (staffId) {
+        const member = staffList.find(s => s.id === staffId);
+        if (!member) return;
+        editInput.value = member.id;
+        document.getElementById('staffNameInput').value = member.name || '';
+        document.getElementById('staffNicknameInput').value = member.nickname || '';
+        document.getElementById('staffPrimaryRoleInput').value = member.primaryRole || 'counselor';
+        document.getElementById('staffContactInput').value = member.contact || '';
+        title.textContent = 'Редактировать сотрудника';
+        submitBtn.textContent = 'Обновить';
+      } else {
+        editInput.value = '';
+        document.getElementById('staffNameInput').value = '';
+        document.getElementById('staffNicknameInput').value = '';
+        document.getElementById('staffPrimaryRoleInput').value = 'counselor';
+        document.getElementById('staffContactInput').value = '';
+        title.textContent = 'Добавить сотрудника';
+        submitBtn.textContent = 'Сохранить';
+      }
+      modal.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeStaffModal() {
+      document.getElementById('staffModal').classList.add('hidden');
+    }
+
+    function handleStaffSubmit(e) {
+      e.preventDefault();
+      const editId = document.getElementById('staffEditId').value;
+      const data = {
+        name: document.getElementById('staffNameInput').value.trim(),
+        nickname: document.getElementById('staffNicknameInput').value.trim(),
+        primaryRole: document.getElementById('staffPrimaryRoleInput').value,
+        contact: document.getElementById('staffContactInput').value.trim()
+      };
+
+      if (editId) {
+        data.id = editId;
+        const idx = staffList.findIndex(s => s.id === editId);
+        if (idx !== -1) staffList[idx] = { ...staffList[idx], ...data };
+        safeStorageSet('cm_cached_staff', staffList);
+
+        if (db) db.collection('staff').doc(editId).update(data).catch(e => {});
+        showToast("Данные сотрудника обновлены", "success");
+        closeStaffModal();
+      } else {
+        const newId = 'staff_' + Date.now();
+        data.id = newId;
+        data.createdAt = Date.now();
+        staffList.push(data);
+        safeStorageSet('cm_cached_staff', staffList);
+
+        if (db) db.collection('staff').doc(newId).set(data).catch(e => {});
+        showToast("Новый сотрудник добавлен в базу", "success");
+        closeStaffModal();
+      }
+      updateAllViews();
+    }
+
+    function deleteStaff(staffId) {
+      const member = staffList.find(s => s.id === staffId);
+      if (!member) return;
+
+      showConfirmDialog({
+        title: "Удалить сотрудника?",
+        message: `Вы действительно хотите удалить "${member.name}"? Все его оценки со слётов также будут стёрты.`,
+        confirmText: "Да, удалить",
+        onConfirm: () => {
+          staffList = staffList.filter(s => s.id !== staffId);
+          safeStorageSet('cm_cached_staff', staffList);
+
+          evaluationsList = evaluationsList.filter(e => e.staffId !== staffId);
+          safeStorageSet('cm_cached_evals', evaluationsList);
+
+          campsList.forEach(camp => {
+            const current = Array.isArray(camp.roster) ? camp.roster : [];
+            if (current.includes(staffId)) {
+              camp.roster = current.filter(id => id !== staffId);
+            }
+          });
+          safeStorageSet('cm_cached_camps', campsList);
+
+          if (db) {
+            db.collection('staff').doc(staffId).delete().catch(e => {});
+          }
+
+          showToast("Сотрудник удалён из базы", "info");
+          updateAllViews();
+        }
+      });
+    }
+
+    /* ================= CRUD CAMPS ================= */
+    function openCampModal(campId = null) {
+      const modal = document.getElementById('campModal');
+      const title = document.getElementById('campModalTitle');
+      const submitBtn = document.getElementById('campModalSubmitBtn');
+      const editInput = document.getElementById('campEditId');
+
+      if (campId) {
+        const camp = campsList.find(c => c.id === campId);
+        if (!camp) return;
+        editInput.value = camp.id;
+        document.getElementById('campNameInput').value = camp.name || '';
+        document.getElementById('campLocationInput').value = camp.location || '';
+        document.getElementById('campStartDateInput').value = camp.startDate || '';
+        document.getElementById('campEndDateInput').value = camp.endDate || '';
+        title.textContent = 'Редактировать слёт';
+        submitBtn.textContent = 'Обновить';
+      } else {
+        editInput.value = '';
+        document.getElementById('campNameInput').value = '';
+        document.getElementById('campLocationInput').value = '';
+        
+        const todayStr = new Date().toISOString().slice(0, 10);
+        document.getElementById('campStartDateInput').value = todayStr;
+        document.getElementById('campEndDateInput').value = todayStr;
+        
+        title.textContent = 'Создать новый слёт';
+        submitBtn.textContent = 'Создать слёт';
+      }
+      modal.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeCampModal() {
+      document.getElementById('campModal').classList.add('hidden');
+    }
+
+    function handleCampSubmit(e) {
+      e.preventDefault();
+      const editId = document.getElementById('campEditId').value;
+      const startDate = document.getElementById('campStartDateInput').value;
+      const endDate = document.getElementById('campEndDateInput').value;
+
+      if (startDate && endDate && startDate > endDate) {
+        showToast("Дата начала не может быть позже даты окончания!", "error");
+        return;
+      }
+
+      const data = {
+        name: document.getElementById('campNameInput').value.trim(),
+        location: document.getElementById('campLocationInput').value.trim(),
+        startDate: startDate,
+        endDate: endDate,
+        startDateTimestamp: startDate ? new Date(startDate).getTime() : Date.now(),
+        endDateTimestamp: endDate ? new Date(endDate).getTime() : Date.now()
+      };
+
+      if (editId) {
+        data.id = editId;
+        const idx = campsList.findIndex(c => c.id === editId);
+        if (idx !== -1) campsList[idx] = { ...campsList[idx], ...data };
+        safeStorageSet('cm_cached_camps', campsList);
+
+        if (db) db.collection('camps').doc(editId).update(data).catch(e => {});
+        showToast("Слёт успешно обновлён", "success");
+        closeCampModal();
+      } else {
+        const newId = 'camp_' + Date.now();
+        data.id = newId;
+        data.roster = [];
+        data.createdAt = Date.now();
+        campsList.push(data);
+        safeStorageSet('cm_cached_camps', campsList);
+
+        if (db) db.collection('camps').doc(newId).set(data).catch(e => {});
+        showToast("Новый слёт создан", "success");
+        closeCampModal();
+      }
+      updateAllViews();
+    }
+
+    function deleteCamp(campId) {
+      const camp = campsList.find(c => c.id === campId);
+      if (!camp) return;
+
+      showConfirmDialog({
+        title: "Удалить слёт?",
+        message: `Удалить слёт "${camp.name}"? Все выставленные на нём оценки будут аннулированы.`,
+        confirmText: "Да, удалить",
+        onConfirm: () => {
+          campsList = campsList.filter(c => c.id !== campId);
+          safeStorageSet('cm_cached_camps', campsList);
+
+          evaluationsList = evaluationsList.filter(e => e.campId !== campId);
+          safeStorageSet('cm_cached_evals', evaluationsList);
+
+          if (db) {
+            db.collection('camps').doc(campId).delete().catch(e => {});
+          }
+
+          showToast("Слёт удалён", "info");
+          updateAllViews();
+        }
+      });
+    }
+
+    /* ================= SHEETJS REAL XLSX EXPORT ================= */
+    function exportXLSX() {
+      if (staffList.length === 0) {
+        showToast("Нет данных для экспорта", "error");
+        return;
+      }
+
+      const wb = XLSX.utils.book_new();
+
+      const staffRows = staffList.map(s => {
+        const m = calculateStaffMultiCampK(s.id);
+        const badge = getCategoryBadge(m);
+        return {
+          "ФИО": s.name || "Без имени",
+          "Позывной": s.nickname || "",
+          "Специализация": ROLE_WEIGHTS[s.primaryRole]?.label || s.primaryRole,
+          "Контакты": s.contact || "",
+          "Слётов пройдено": Number(m.count) || 0,
+          "Педагогический K": m.pedK !== null ? Number(m.pedK) : "",
+          "Организаторский K": m.orgK !== null ? Number(m.orgK) : "",
+          "Технический K": m.techK !== null ? Number(m.techK) : "",
+          "Итоговый K-индекс": m.isStopListed ? 0 : Number(m.overallK) || 0,
+          "Тренд": m.trend,
+          "Статус в лагере": badge.label
+        };
+      });
+      const wsStaff = XLSX.utils.json_to_sheet(staffRows);
+      XLSX.utils.book_append_sheet(wb, wsStaff, "Реестр команды");
+
+      const evalRows = evaluationsList.map(e => {
+        const staff = staffList.find(s => s.id === e.staffId);
+        const camp = campsList.find(c => c.id === e.campId);
+        return {
+          "Сотрудник": staff ? (staff.name || "Без имени") : e.staffId,
+          "Слёт / Смена": camp ? camp.name : e.campId,
+          "Локация": camp ? (camp.location || "") : "",
+          "Даты слёта": formatCampDateRange(camp),
+          "Роль на смене": ROLE_WEIGHTS[e.role]?.label || e.role,
+          "Оценка за слёт (K)": Number(e.finalScore) || 0,
+          "Режим 360°": e.is360 ? "Да" : "Нет",
+          "Куратор (360)": e.eval360?.curatorScore ?? "",
+          "Напарник (360)": e.eval360?.partnerScore ?? "",
+          "Отряд (360)": e.eval360?.squadScore ?? "",
+          "D (Дисциплина)": e.vectors?.D !== undefined ? Number(e.vectors.D) : "",
+          "A (Аудитория)": e.vectors?.A !== undefined ? Number(e.vectors.A) : "",
+          "S (Безопасность)": e.vectors?.S !== undefined ? Number(e.vectors.S) : "",
+          "T (Командность)": e.vectors?.T !== undefined ? Number(e.vectors.T) : "",
+          "F (Стресс)": e.vectors?.F !== undefined ? Number(e.vectors.F) : "",
+          "L (Обучаемость)": e.vectors?.L !== undefined ? Number(e.vectors.L) : "",
+          "Дата фиксации": e.timestamp ? new Date(e.timestamp).toLocaleDateString('ru-RU') : ""
+        };
+      });
+      const wsEvals = XLSX.utils.json_to_sheet(evalRows);
+      XLSX.utils.book_append_sheet(wb, wsEvals, "Оценки по слётам");
+
+      const campRows = campsList.map(c => {
+        const rosterCount = (Array.isArray(c.roster) ? c.roster : []).length;
+        const campEvals = getCampEvaluations(c.id);
+        const avg = campEvals.length > 0 ? Number((campEvals.reduce((a, b) => a + b.finalScore, 0) / campEvals.length).toFixed(2)) : "";
+        return {
+          "Название слёта": c.name || "Без названия",
+          "Локация / База": c.location || "",
+          "Даты проведения": formatCampDateRange(c),
+          "Дата начала": c.startDate || "",
+          "Дата окончания": c.endDate || "",
+          "Человек в составе": Number(rosterCount) || 0,
+          "Оценено сотрудников": Number(campEvals.length) || 0,
+          "Средний K команды": avg
+        };
+      });
+      const wsCamps = XLSX.utils.json_to_sheet(campRows);
+      XLSX.utils.book_append_sheet(wb, wsCamps, "Сводка слётов");
+
+      const fileName = `CampMetrix_360_Export_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+      showToast("Отчёт успешно выгружен в Excel (.xlsx)!", "success");
+    }
+  </script>
+</body>
+</html>
