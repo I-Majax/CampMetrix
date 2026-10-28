@@ -17,11 +17,11 @@ export async function pickFromContacts() {
         return;
       }
     } catch (err) {
-      console.warn("Contact picker closed or failed:", err);
+      console.warn("Contact picker closed:", err);
     }
   }
 
-  showToast("В Safari: выберите .vcf или нажмите на поле телефона для клавиатуры", "info");
+  showToast("В Safari: выберите карточку .vcf или нажмите на поле телефона", "info");
   document.getElementById('vcfContactInput').click();
 }
 
@@ -32,41 +32,25 @@ export function handleVcfFileSelected(event) {
   const reader = new FileReader();
   reader.onload = function(e) {
     const text = e.target.result;
-    const parsed = parseVcfContact(text);
-    
-    let filledCount = 0;
+    const parsed = parseVcf(text);
     if (parsed.name && !document.getElementById('staffNameInput').value.trim()) {
       document.getElementById('staffNameInput').value = parsed.name;
-      filledCount++;
     }
     if (parsed.tel) {
       document.getElementById('staffContactInput').value = parsed.tel;
-      filledCount++;
     }
-
-    if (filledCount > 0) {
-      showToast(`Контакт импортирован (${parsed.name || parsed.tel})`, "success");
-    } else {
-      showToast("Не удалось извлечь имя или номер из vCard", "error");
-    }
+    showToast("Контакт успешно импортирован!", "success");
     event.target.value = '';
   };
   reader.readAsText(file);
 }
 
-function parseVcfContact(vcfText) {
-  let name = '';
-  let tel = '';
-  const lines = vcfText.split(/\r\n|\r|\n/);
-
-  for (let line of lines) {
+function parseVcf(text) {
+  let name = '', tel = '';
+  text.split(/\r\n|\r|\n/).forEach(line => {
     line = line.trim();
-    if (!name && (line.startsWith('FN:') || line.startsWith('FN;'))) {
-      name = line.substring(line.indexOf(':') + 1).trim();
-    }
-    if (!tel && line.startsWith('TEL')) {
-      tel = line.substring(line.indexOf(':') + 1).trim();
-    }
-  }
+    if (!name && (line.startsWith('FN:') || line.startsWith('FN;'))) name = line.substring(line.indexOf(':') + 1).trim();
+    if (!tel && line.startsWith('TEL')) tel = line.substring(line.indexOf(':') + 1).trim();
+  });
   return { name, tel };
 }

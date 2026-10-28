@@ -7,15 +7,15 @@ let activeQrStaffId = null;
 let activeQrType = 'partner';
 
 export function checkGuestUrlParams() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const isGuest = urlParams.get('guest');
-  const campId = urlParams.get('campId');
-  const staffId = urlParams.get('staffId');
-  const type = urlParams.get('type') || 'partner';
+  const params = new URLSearchParams(window.location.search);
+  const isGuest = params.get('guest');
+  const campId = params.get('campId');
+  const staffId = params.get('staffId');
+  const type = params.get('type') || 'partner';
 
   if (isGuest && campId && staffId) {
-    document.getElementById('adminApp').classList.add('hidden');
-    document.getElementById('guestSurveyView').classList.remove('hidden');
+    document.getElementById('adminApp')?.classList.add('hidden');
+    document.getElementById('guestSurveyView')?.classList.remove('hidden');
     renderGuestSurveyForm(campId, staffId, type);
   }
 }
@@ -25,61 +25,34 @@ export function renderGuestSurveyForm(campId, staffId, type) {
   document.getElementById('guestStaffId').value = staffId;
   document.getElementById('guestType').value = type;
 
-  const questionsContainer = document.getElementById('guestQuestionsList');
-  questionsContainer.innerHTML = '';
+  const container = document.getElementById('guestQuestionsList');
+  container.innerHTML = '';
 
-  if (type === 'partner') {
-    document.getElementById('guestSurveyTitle').textContent = "Оценка напарника по отряду";
-    document.getElementById('guestSurveySubtitle').textContent = "Экспресс-опрос для взаимной поддержки команды";
+  const questions = type === 'partner' ? [
+    { id: 'q1', title: '1. Надёжность и подстраховка в паре', desc: 'Делили ли нагрузку поровну?' },
+    { id: 'q2', title: '2. Атмосфера и взаимопомощь', desc: 'Было ли комфортно работать?' },
+    { id: 'q3', title: '3. Готовность работать снова', desc: 'Пошёл бы в пару на следующий слёт?' }
+  ] : [
+    { id: 'q1', title: '1. Насколько было интересно и весело?', desc: 'Игры, вечерние дела и энергия' },
+    { id: 'q2', title: '2. Чувствовал ли ты заботу и внимание?', desc: 'Помогал ли вожатый при трудностях?' },
+    { id: 'q3', title: '3. Хочешь ли снова в отряд к нему?', desc: 'Поехал бы на слёт с ним снова?' }
+  ];
 
-    const questions = [
-      { id: 'q1', title: '1. Надёжность и подстраховка', desc: 'Чувствовалось ли, что на человека можно опереться в кризисе?' },
-      { id: 'q2', title: '2. Разделение нагрузки', desc: 'Делили ли работу по отряду поровну (планёрки, отбой, режим)?' },
-      { id: 'q3', title: '3. Атмосфера и поддержка', desc: 'Было ли комфортно психологически? Не сливал ли негатив?' },
-      { id: 'q4', title: '4. Готовность работать снова', desc: 'Пошёл бы с этим вожатым в пару на следующий слёт?' }
-    ];
-
-    questions.forEach(q => {
-      const block = document.createElement('div');
-      block.className = 'bg-slate-800/80 p-3.5 rounded-2xl border border-slate-700/80 space-y-2';
-      block.innerHTML = `
-        <div class="flex justify-between items-center text-xs">
-          <span class="font-bold text-white">${q.title}</span>
-          <span id="guestVal_${q.id}" class="font-black text-indigo-400 text-sm">4.5</span>
-        </div>
-        <p class="text-[11px] text-slate-400">${q.desc}</p>
-        <input type="range" id="guestSlider_${q.id}" min="1" max="5" step="0.5" value="4.5" 
-               oninput="document.getElementById('guestVal_${q.id}').textContent = parseFloat(this.value).toFixed(1)"
-               class="w-full accent-indigo-500 cursor-pointer">
-      `;
-      questionsContainer.appendChild(block);
-    });
-  } else {
-    document.getElementById('guestSurveyTitle').textContent = "Отзыв отряда о вожатом";
-    document.getElementById('guestSurveySubtitle').textContent = "Поделись впечатлениями о своём вожатом";
-
-    const questions = [
-      { id: 'q1', title: '1. Насколько было интересно и весело?', desc: 'Игры, свечки, вечерние дела и энергия вожатого' },
-      { id: 'q2', title: '2. Чувствовал ли ты заботу и внимание?', desc: 'Помогал ли вожатый, слушал ли, защищал ли от буллинга?' },
-      { id: 'q3', title: '3. Хочешь ли снова в отряд к нему?', desc: 'Поехал бы на следующий слёт с этим вожатым?' }
-    ];
-
-    questions.forEach(q => {
-      const block = document.createElement('div');
-      block.className = 'bg-slate-800/80 p-3.5 rounded-2xl border border-slate-700/80 space-y-2';
-      block.innerHTML = `
-        <div class="flex justify-between items-center text-xs">
-          <span class="font-bold text-white">${q.title}</span>
-          <span id="guestVal_${q.id}" class="font-black text-amber-400 text-sm">5.0</span>
-        </div>
-        <p class="text-[11px] text-slate-400">${q.desc}</p>
-        <input type="range" id="guestSlider_${q.id}" min="1" max="5" step="0.5" value="5.0" 
-               oninput="document.getElementById('guestVal_${q.id}').textContent = parseFloat(this.value).toFixed(1)"
-               class="w-full accent-amber-500 cursor-pointer">
-      `;
-      questionsContainer.appendChild(block);
-    });
-  }
+  questions.forEach(q => {
+    const block = document.createElement('div');
+    block.className = 'bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80 space-y-1';
+    block.innerHTML = `
+      <div class="flex justify-between items-center text-xs">
+        <span class="font-bold text-white">${q.title}</span>
+        <span id="gVal_${q.id}" class="font-black text-indigo-400 text-sm">4.5</span>
+      </div>
+      <p class="text-[10px] text-slate-400">${q.desc}</p>
+      <input type="range" min="1" max="5" step="0.5" value="4.5" 
+             oninput="document.getElementById('gVal_${q.id}').textContent = parseFloat(this.value).toFixed(1)"
+             class="w-full accent-indigo-500 cursor-pointer">
+    `;
+    container.appendChild(block);
+  });
 }
 
 export function submitGuestFeedback(e) {
@@ -91,36 +64,35 @@ export function submitGuestFeedback(e) {
   const sliders = document.querySelectorAll('#guestQuestionsList input[type="range"]');
   let sum = 0;
   sliders.forEach(s => sum += parseFloat(s.value));
-  const finalScore = parseFloat((sum / sliders.length).toFixed(1));
+  const avg = parseFloat((sum / sliders.length).toFixed(1));
 
   try {
     if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
     const firestore = firebase.firestore();
 
     firestore.collection('evaluations_feedback').add({
-      campId,
-      staffId,
-      type,
-      score: finalScore,
-      timestamp: Date.now()
+      campId, staffId, type, score: avg, timestamp: Date.now()
     });
 
-    firestore.collection('evaluations').where('campId', '==', campId).where('staffId', '==', staffId).get().then(snap => {
-      if (!snap.empty) {
-        const doc = snap.docs[0];
-        const data = doc.data();
-        const eval360 = data.eval360 || { curatorScore: 4.0, partnerScore: 4.0, squadScore: 4.0 };
-        if (type === 'partner') eval360.partnerScore = finalScore;
-        else eval360.squadScore = finalScore;
+    // Реактивное обновление в основной таблице evaluations
+    firestore.collection('evaluations')
+      .where('campId', '==', campId)
+      .where('staffId', '==', staffId)
+      .get().then(snap => {
+        if (!snap.empty) {
+          const doc = snap.docs[0];
+          const data = doc.data();
+          const eval360 = data.eval360 || { curatorScore: 4.0, partnerScore: 4.0, squadScore: 4.0 };
+          if (type === 'partner') eval360.partnerScore = avg;
+          else eval360.squadScore = avg;
 
-        doc.ref.update({
-          is360: true,
-          eval360: eval360
-        });
-      }
-    });
+          // Мгновенный пересчет finalScore
+          const finalScore = parseFloat(((eval360.curatorScore * 0.45) + (eval360.partnerScore * 0.30) + (eval360.squadScore * 0.25)).toFixed(2));
+          doc.ref.update({ is360: true, eval360, finalScore });
+        }
+      });
   } catch (err) {
-    console.warn("Guest submit offline:", err);
+    console.warn(err);
   }
 
   document.getElementById('guestFeedbackForm').classList.add('hidden');
@@ -134,69 +106,40 @@ export function openQrModal(campId, staffId) {
 
   const staff = state.staff.find(s => s.id === staffId);
   document.getElementById('qrStaffName').textContent = staff ? staff.name : 'Сотрудник';
-
   renderLiveQrCode();
   document.getElementById('qrModal').classList.remove('hidden');
   lucide.createIcons();
 }
 
 export function closeQrModal() {
-  activeQrCampId = null;
-  activeQrStaffId = null;
   document.getElementById('qrModal').classList.add('hidden');
 }
 
 export function switchQrType(type) {
   activeQrType = type;
-  const btnPartner = document.getElementById('qrBtnTypePartner');
-  const btnSquad = document.getElementById('qrBtnTypeSquad');
-
-  if (type === 'partner') {
-    btnPartner.className = 'flex-1 py-1.5 rounded-md font-semibold transition bg-indigo-600 text-white';
-    btnSquad.className = 'flex-1 py-1.5 rounded-md font-semibold transition text-slate-400 hover:text-white';
-  } else {
-    btnPartner.className = 'flex-1 py-1.5 rounded-md font-semibold transition text-slate-400 hover:text-white';
-    btnSquad.className = 'flex-1 py-1.5 rounded-md font-semibold transition bg-indigo-600 text-white';
-  }
-
+  document.getElementById('qrBtnTypePartner').className = type === 'partner' ? 'flex-1 py-1.5 rounded-md font-semibold bg-indigo-600 text-white' : 'flex-1 py-1.5 rounded-md font-semibold text-slate-400';
+  document.getElementById('qrBtnTypeSquad').className = type === 'squad' ? 'flex-1 py-1.5 rounded-md font-semibold bg-indigo-600 text-white' : 'flex-1 py-1.5 rounded-md font-semibold text-slate-400';
   renderLiveQrCode();
-}
-
-function getGuestSurveyUrl() {
-  const baseUrl = window.location.origin + window.location.pathname;
-  return `${baseUrl}?guest=1&campId=${activeQrCampId}&staffId=${activeQrStaffId}&type=${activeQrType}`;
 }
 
 function renderLiveQrCode() {
   const container = document.getElementById('qrcodeCanvas');
   container.innerHTML = '';
-
-  const targetUrl = getGuestSurveyUrl();
+  const url = `${window.location.origin}${window.location.pathname}?guest=1&campId=${activeQrCampId}&staffId=${activeQrStaffId}&type=${activeQrType}`;
 
   try {
-    new QRCode(container, {
-      text: targetUrl,
-      width: 180,
-      height: 180,
-      colorDark: "#090d16",
-      colorLight: "#ffffff",
-      correctLevel: QRCode.CorrectLevel.M
-    });
-  } catch (err) {
-    container.innerHTML = `<a href="${targetUrl}" target="_blank" class="text-xs text-indigo-600 underline">Открыть анкету</a>`;
+    new QRCode(container, { text: url, width: 170, height: 170, colorDark: "#090d16", colorLight: "#ffffff" });
+  } catch {
+    container.innerHTML = `<a href="${url}" target="_blank" class="text-xs text-indigo-600 underline">Ссылка на опрос</a>`;
   }
 }
 
 export function copyQrLink() {
-  const url = getGuestSurveyUrl();
-  navigator.clipboard.writeText(url).then(() => {
-    showToast("Ссылка на опрос скопирована!", "success");
-  }).catch(() => {
-    showToast(url, "info");
-  });
+  const url = `${window.location.origin}${window.location.pathname}?guest=1&campId=${activeQrCampId}&staffId=${activeQrStaffId}&type=${activeQrType}`;
+  navigator.clipboard.writeText(url).then(() => showToast("Ссылка скопирована!", "success"));
 }
 
 export function openSurveyOnCurrentDevice() {
-  const url = getGuestSurveyUrl();
+  const url = `${window.location.origin}${window.location.pathname}?guest=1&campId=${activeQrCampId}&staffId=${activeQrStaffId}&type=${activeQrType}`;
   window.open(url, '_blank');
 }

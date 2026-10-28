@@ -1,4 +1,4 @@
-import { state, deleteRecord, saveRecord } from './db.js';
+import { state, deleteRecord } from './db.js';
 import { 
   calculateStaffMultiCampK, 
   getCampEvaluations, 
@@ -8,6 +8,12 @@ import {
   getWeakestVector 
 } from './calc.js';
 import { ROLE_WEIGHTS } from './config.js';
+import { 
+  calculateGrantKPI, 
+  renderWalkieTalkieList, 
+  renderVolunteerLedgerSummary, 
+  renderSchoolQuotasCheckin 
+} from './grant.js';
 
 let radarChartInstance = null;
 let campRadarChartInstance = null;
@@ -21,113 +27,67 @@ export function setActiveRosterCampId(id) {
 export function showToast(message, type = 'success') {
   const container = document.getElementById('toastContainer');
   const toast = document.createElement('div');
-  
-  let borderClass = 'border-emerald-500/50 bg-slate-900/95 text-emerald-300';
-  let icon = 'check-circle';
-  if (type === 'error') {
-    borderClass = 'border-rose-500/50 bg-slate-900/95 text-rose-300';
-    icon = 'alert-triangle';
-  } else if (type === 'info') {
-    borderClass = 'border-indigo-500/50 bg-slate-900/95 text-indigo-300';
-    icon = 'info';
-  }
-
-  toast.className = `pointer-events-auto p-3 rounded-xl border ${borderClass} shadow-xl flex items-center gap-2.5 text-xs font-semibold transform transition-all duration-300 translate-y-2 opacity-0`;
-  toast.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4 flex-shrink-0"></i> <span>${message}</span>`;
+  const borderClass = type === 'error' ? 'border-rose-500/50 bg-slate-900/95 text-rose-300' : 'border-emerald-500/50 bg-slate-900/95 text-emerald-300';
+  toast.className = `p-3 rounded-xl border ${borderClass} shadow-xl flex items-center gap-2 text-xs font-semibold transform transition-all duration-300 translate-y-2 pointer-events-auto`;
+  toast.innerHTML = `<span>${message}</span>`;
   container.appendChild(toast);
-  lucide.createIcons();
-
-  requestAnimationFrame(() => {
-    toast.classList.remove('translate-y-2', 'opacity-0');
-  });
-
   setTimeout(() => {
-    toast.classList.add('opacity-0', '-translate-y-2');
+    toast.style.opacity = '0';
     setTimeout(() => toast.remove(), 300);
-  }, 3500);
+  }, 3000);
 }
 
-export function showConfirmDialog({ title, message, confirmText = 'Подтвердить', isDanger = true, onConfirm }) {
+export function showConfirmDialog({ title, message, onConfirm }) {
   const modal = document.getElementById('confirmModal');
   document.getElementById('confirmModalTitle').textContent = title;
   document.getElementById('confirmModalMessage').textContent = message;
   const btn = document.getElementById('confirmModalActionBtn');
-  btn.textContent = confirmText;
-  btn.className = isDanger
-    ? 'px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold transition shadow-sm'
-    : 'px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition shadow-sm';
   btn.onclick = () => {
-    closeConfirmDialog();
+    document.getElementById('confirmModal').classList.add('hidden');
     if (onConfirm) onConfirm();
   };
   modal.classList.remove('hidden');
-  lucide.createIcons();
-}
-
-export function closeConfirmDialog() {
-  document.getElementById('confirmModal').classList.add('hidden');
 }
 
 export function switchTab(tabId) {
-  document.querySelectorAll('main > section').forEach(sec => sec.classList.add('hidden'));
-  const targetSec = document.getElementById(`tab-${tabId}`);
-  if (targetSec) targetSec.classList.remove('hidden');
-
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.classList.remove('bg-indigo-600', 'text-white');
-    btn.classList.add('text-slate-400');
+  ['registry', 'camps', 'grant', 'mts'].forEach(id => {
+    document.getElementById(`tab-${id}`)?.classList.toggle('hidden', id !== tabId);
+    document.getElementById(`tabBtn-${id}`)?.classList.toggle('bg-indigo-600', id !== tabId ? false : true);
+    document.getElementById(`tabBtn-${id}`)?.classList.toggle('text-white', id !== tabId ? false : true);
+    document.getElementById(`tabBtn-${id}`)?.classList.toggle('text-slate-400', id !== tabId ? true : false);
   });
-  const activeBtn = document.getElementById(`tabBtn-${tabId}`);
-  if (activeBtn) {
-    activeBtn.classList.add('bg-indigo-600', 'text-white');
-    activeBtn.classList.remove('text-slate-400');
-  }
 
   if (tabId === 'camps') renderCampsList();
   else if (tabId === 'registry') renderStaffRegistry();
+  else if (tabId === 'grant') renderGrantTab();
+  else if (tabId === 'mts') renderMtsTab();
   lucide.createIcons();
 }
 
 export function updateAllViews() {
-  renderSummaryCards();
+  document.getElementById('statTotalStaff').textContent = state.staff.length;
+  document.getElementById('statTotalCamps').textContent = state.camps.length;
+  document.getElementById('statCoreStaff').textContent = state.staff.filter(s => calculateStaffMultiCampK(s.id).overallK >= 4.3).length;
+  document.getElementById('statStopList').textContent = state.staff.filter(s => calculateStaffMultiCampK(s.id).isStopListed).length;
+
   renderStaffRegistry();
   renderCampsList();
   lucide.createIcons();
 }
 
-export function renderSummaryCards() {
-  document.getElementById('statTotalStaff').textContent = state.staff.length;
-  document.getElementById('statTotalCamps').textContent = state.camps.length;
-
-  let core = 0;
-  let stop = 0;
-  state.staff.forEach(s => {
-    const m = calculateStaffMultiCampK(s.id);
-    if (m.isStopListed) stop++;
-    else if (m.overallK >= 4.3) core++;
-  });
-
-  document.getElementById('statCoreStaff').textContent = core;
-  document.getElementById('statStopList').textContent = stop;
-}
-
-export function setSort(sortKey) {
-  currentSort = sortKey;
-  document.getElementById('sortSelect').value = sortKey;
+export function setSort(key) {
+  currentSort = key;
+  document.getElementById('sortSelect').value = key;
   renderStaffRegistry();
 }
 
 export function renderStaffRegistry() {
   const search = (document.getElementById('searchInput')?.value || '').toLowerCase();
   const roleFilter = document.getElementById('roleFilter')?.value || 'all';
-  currentSort = document.getElementById('sortSelect')?.value || 'k_desc';
 
-  let filtered = state.staff.filter(s => {
-    const nameStr = (s.name || '').toLowerCase();
-    const nickStr = (s.nickname || '').toLowerCase();
-    const matchesSearch = nameStr.includes(search) || nickStr.includes(search);
-    if (!matchesSearch) return false;
-
+  const filtered = state.staff.filter(s => {
+    const match = (s.name || '').toLowerCase().includes(search) || (s.nickname || '').toLowerCase().includes(search);
+    if (!match) return false;
     const m = calculateStaffMultiCampK(s.id);
     if (roleFilter === 'stop') return m.isStopListed;
     if (roleFilter === 'pedagogical') return m.pedK !== null;
@@ -144,18 +104,11 @@ export function renderStaffRegistry() {
     if (currentSort === 'name_asc') return (a.name || '').localeCompare(b.name || '', 'ru');
     if (currentSort === 'camps_desc') return mb.count - ma.count;
     if (currentSort === 'ped_desc') return (mb.pedK || 0) - (ma.pedK || 0);
-    if (currentSort === 'org_desc') return (mb.orgK || 0) - (ma.orgK || 0);
-    if (currentSort === 'tech_desc') return (mb.techK || 0) - (ma.techK || 0);
     return 0;
   });
 
-  const emptyNotice = document.getElementById('emptyStaffNotice');
-  if (filtered.length === 0) emptyNotice?.classList.remove('hidden');
-  else emptyNotice?.classList.add('hidden');
-
   renderDesktopTable(filtered);
   renderMobileCards(filtered);
-  lucide.createIcons();
 }
 
 function renderDesktopTable(list) {
@@ -168,31 +121,23 @@ function renderDesktopTable(list) {
     const badge = getCategoryBadge(m);
     const tr = document.createElement('tr');
     tr.className = 'hover:bg-slate-800/80 transition';
-
     tr.innerHTML = `
       <td class="py-3 px-4">
-        <div class="font-bold text-white flex items-center gap-1.5">
-          ${member.name || 'Без имени'}
-          ${member.nickname ? '<span class="text-xs text-slate-400 font-normal">«'+member.nickname+'»</span>' : ''}
-        </div>
+        <div class="font-bold text-white">${member.name || 'Без имени'} ${member.nickname ? '«'+member.nickname+'»' : ''}</div>
         <div class="text-xs text-slate-400">${ROLE_WEIGHTS[member.primaryRole]?.label || member.primaryRole}</div>
       </td>
       <td class="py-3 px-3 text-center text-slate-300 font-semibold">${m.count}</td>
       <td class="py-3 px-3 text-center font-bold text-indigo-400">${m.pedK !== null ? m.pedK : '—'}</td>
       <td class="py-3 px-3 text-center font-bold text-purple-400">${m.orgK !== null ? m.orgK : '—'}</td>
       <td class="py-3 px-3 text-center font-bold text-amber-400">${m.techK !== null ? m.techK : '—'}</td>
-      <td class="py-3 px-3 text-center font-black text-base ${m.isStopListed ? 'text-rose-400' : 'text-white'}">
-        ${m.count > 0 ? (m.isStopListed ? '0.00' : m.overallK) : '—'}
-      </td>
+      <td class="py-3 px-3 text-center font-black text-base ${m.isStopListed ? 'text-rose-400' : 'text-white'}">${m.count > 0 ? (m.isStopListed ? '0.00' : m.overallK) : '—'}</td>
       <td class="py-3 px-3 text-center text-xs text-slate-300 font-semibold">${m.trend}</td>
-      <td class="py-3 px-3 text-center">
-        <span class="text-[11px] px-2 py-0.5 rounded-full font-semibold ${badge.class}">${badge.label}</span>
-      </td>
+      <td class="py-3 px-3 text-center"><span class="text-[11px] px-2 py-0.5 rounded-full font-semibold ${badge.class}">${badge.label}</span></td>
       <td class="py-3 px-4 text-right space-x-1">
-        <button onclick="window.app.viewDossier('${member.id}')" class="p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-indigo-300 transition" title="Досье"><i data-lucide="file-text" class="w-4 h-4"></i></button>
-        <button onclick="window.app.startEvaluationFlow(null, '${member.id}')" class="p-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition" title="Оценить"><i data-lucide="award" class="w-4 h-4"></i></button>
-        <button onclick="window.app.openStaffModal('${member.id}')" class="p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition" title="Редактировать"><i data-lucide="pencil" class="w-4 h-4"></i></button>
-        <button onclick="window.app.deleteStaff('${member.id}')" class="p-1.5 rounded-lg bg-rose-950/50 hover:bg-rose-900 text-rose-300 border border-rose-800/40 transition" title="Удалить"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+        <button onclick="window.app.viewDossier('${member.id}')" class="p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-indigo-300" title="Досье"><i data-lucide="file-text" class="w-4 h-4"></i></button>
+        <button onclick="window.app.startEvaluationFlow(null, '${member.id}')" class="p-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white" title="Оценить"><i data-lucide="award" class="w-4 h-4"></i></button>
+        <button onclick="window.app.openStaffModal('${member.id}')" class="p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300" title="Редактировать"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+        <button onclick="window.app.deleteStaff('${member.id}')" class="p-1.5 rounded-lg bg-rose-950/50 hover:bg-rose-900 text-rose-300" title="Удалить"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
       </td>
     `;
     tbody.appendChild(tr);
@@ -208,37 +153,27 @@ function renderMobileCards(list) {
     const m = calculateStaffMultiCampK(member.id);
     const badge = getCategoryBadge(m);
     const card = document.createElement('div');
-    card.className = 'bg-slate-800/80 border border-slate-700/60 rounded-xl p-3.5 space-y-3 shadow-sm';
-
+    card.className = 'bg-slate-800/80 border border-slate-700/60 rounded-xl p-3.5 space-y-3';
     card.innerHTML = `
-      <div class="flex items-start justify-between gap-2">
+      <div class="flex justify-between items-start">
         <div>
-          <div class="font-bold text-white text-sm flex items-center gap-1.5">
-            ${member.name || 'Без имени'}
-            ${member.nickname ? '<span class="text-xs text-slate-400 font-normal">«'+member.nickname+'»</span>' : ''}
-          </div>
-          <div class="text-[11px] text-slate-400 mt-0.5">${ROLE_WEIGHTS[member.primaryRole]?.label || member.primaryRole} • ${member.contact || 'Нет контакта'}</div>
+          <div class="font-bold text-white text-sm">${member.name || 'Без имени'} ${member.nickname ? '«'+member.nickname+'»' : ''}</div>
+          <div class="text-[11px] text-slate-400">${ROLE_WEIGHTS[member.primaryRole]?.label || member.primaryRole} • ${member.contact || '—'}</div>
         </div>
-        <div class="text-right flex flex-col items-end">
-          <div class="text-lg font-black ${m.isStopListed ? 'text-rose-400' : 'text-white'}">
-            ${m.count > 0 ? (m.isStopListed ? '0.00' : m.overallK) : '—'}
-          </div>
-          <span class="text-[10px] px-2 py-0.5 rounded-full font-semibold ${badge.class}">${badge.label}</span>
+        <div class="text-right">
+          <div class="text-base font-black ${m.isStopListed ? 'text-rose-400' : 'text-white'}">${m.count > 0 ? (m.isStopListed ? '0.00' : m.overallK) : '—'}</div>
+          <span class="text-[9px] px-2 py-0.5 rounded-full font-semibold ${badge.class}">${badge.label}</span>
         </div>
       </div>
-
-      <div class="grid grid-cols-4 gap-1.5 bg-slate-900/60 p-2 rounded-lg text-center text-[10px]">
-        <div><div class="text-slate-500 uppercase">Слётов</div><div class="font-bold text-white mt-0.5">${m.count}</div></div>
-        <div><div class="text-slate-500 uppercase">Пед. K</div><div class="font-bold text-indigo-400 mt-0.5">${m.pedK !== null ? m.pedK : '—'}</div></div>
-        <div><div class="text-slate-500 uppercase">Орг. K</div><div class="font-bold text-purple-400 mt-0.5">${m.orgK !== null ? m.orgK : '—'}</div></div>
-        <div><div class="text-slate-500 uppercase">Тех. K</div><div class="font-bold text-amber-400 mt-0.5">${m.techK !== null ? m.techK : '—'}</div></div>
+      <div class="grid grid-cols-4 gap-1 text-center bg-slate-900/60 p-2 rounded-lg text-[10px]">
+        <div><span class="text-slate-500">Слётов</span><div class="font-bold text-white">${m.count}</div></div>
+        <div><span class="text-slate-500">Пед. K</span><div class="font-bold text-indigo-400">${m.pedK || '—'}</div></div>
+        <div><span class="text-slate-500">Орг. K</span><div class="font-bold text-purple-400">${m.orgK || '—'}</div></div>
+        <div><span class="text-slate-500">Тех. K</span><div class="font-bold text-amber-400">${m.techK || '—'}</div></div>
       </div>
-
-      <div class="flex items-center gap-1.5 pt-1">
-        <button onclick="window.app.viewDossier('${member.id}')" class="flex-1 py-1.5 bg-slate-700 hover:bg-slate-600 text-indigo-300 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1">Досье</button>
-        <button onclick="window.app.startEvaluationFlow(null, '${member.id}')" class="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1">Оценить</button>
-        <button onclick="window.app.openStaffModal('${member.id}')" class="p-1.5 bg-slate-700 text-slate-300 rounded-lg"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
-        <button onclick="window.app.deleteStaff('${member.id}')" class="p-1.5 bg-rose-950/60 text-rose-300 border border-rose-800/40 rounded-lg"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+      <div class="flex gap-1.5 pt-1">
+        <button onclick="window.app.viewDossier('${member.id}')" class="flex-1 py-1.5 bg-slate-700 text-indigo-300 rounded-lg text-xs font-semibold">Досье</button>
+        <button onclick="window.app.startEvaluationFlow(null, '${member.id}')" class="flex-1 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-semibold">Оценить</button>
       </div>
     `;
     container.appendChild(card);
@@ -247,169 +182,71 @@ function renderMobileCards(list) {
 
 export function renderCampsList() {
   const container = document.getElementById('campsContainer');
-  const emptyNotice = document.getElementById('emptyCampsNotice');
   if (!container) return;
-
   container.innerHTML = '';
 
-  if (state.camps.length === 0) {
-    if (emptyNotice) emptyNotice.classList.remove('hidden');
-    container.classList.add('hidden');
-    return;
-  }
-  
-  if (emptyNotice) emptyNotice.classList.add('hidden');
-  container.classList.remove('hidden');
-
-  const sortedCamps = [...state.camps].sort((a, b) => {
-    const timeA = a.startDate ? new Date(a.startDate).getTime() : (a.createdAt || 0);
-    const timeB = b.startDate ? new Date(b.startDate).getTime() : (b.createdAt || 0);
-    return timeB - timeA;
-  });
-
-  sortedCamps.forEach(c => {
+  state.camps.forEach(c => {
     const rosterCount = (Array.isArray(c.roster) ? c.roster : []).length;
-    const campEvals = getCampEvaluations(c.id);
-    const evalsCount = campEvals.length;
-    
-    let avgScore = '—';
-    if (campEvals.length > 0) {
-      const sum = campEvals.reduce((acc, curr) => acc + curr.finalScore, 0);
-      avgScore = (sum / campEvals.length).toFixed(2);
-    }
-
-    const dateRangeStr = formatCampDateRange(c);
+    const evals = getCampEvaluations(c.id);
+    const avg = evals.length ? (evals.reduce((a, b) => a + b.finalScore, 0) / evals.length).toFixed(2) : '—';
 
     const card = document.createElement('div');
-    card.className = 'bg-slate-800/80 border border-slate-700/60 p-3.5 sm:p-4 rounded-xl flex flex-col justify-between gap-3 shadow-sm hover:border-slate-600 transition';
+    card.className = 'bg-slate-800/80 border border-slate-700/60 p-4 rounded-xl space-y-3';
     card.innerHTML = `
-      <div>
-        <div class="flex items-start justify-between gap-2">
-          <div class="font-bold text-white text-sm sm:text-base leading-tight">${c.name || 'Слёт без названия'}</div>
-          <div class="flex items-center gap-1 flex-shrink-0">
-            <button onclick="window.app.openCampModal('${c.id}')" class="p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition" title="Редактировать"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
-            <button onclick="window.app.deleteCamp('${c.id}')" class="p-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900 text-rose-400 border border-rose-800/40 transition" title="Удалить"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
-          </div>
+      <div class="flex justify-between items-start">
+        <div>
+          <h3 class="font-bold text-white text-base">${c.name}</h3>
+          <p class="text-xs text-slate-400 mt-0.5">📍 ${c.location || 'Локация не указана'} • 📅 ${formatCampDateRange(c)}</p>
         </div>
-        
-        <div class="text-[11px] text-slate-400 mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
-          <span>📍 ${c.location || 'Локация не указана'}</span>
-          <span class="text-indigo-300">📅 ${dateRangeStr}</span>
-        </div>
-
-        <div class="flex flex-wrap items-center justify-between gap-2 mt-3 pt-2.5 border-t border-slate-700/60 text-xs">
-          <div class="flex items-center gap-3">
-            <span class="text-indigo-400 font-semibold flex items-center gap-1"><i data-lucide="users" class="w-3.5 h-3.5"></i> Состав: ${rosterCount}</span>
-            <span class="text-emerald-400 font-semibold flex items-center gap-1"><i data-lucide="award" class="w-3.5 h-3.5"></i> Оценено: ${evalsCount}</span>
-          </div>
-          <span class="text-amber-300 font-bold ml-auto">Средний K: ${avgScore}</span>
+        <div class="flex gap-1">
+          <button onclick="window.app.openCampModal('${c.id}')" class="p-1 rounded bg-slate-700 text-slate-300"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+          <button onclick="window.app.deleteCamp('${c.id}')" class="p-1 rounded bg-rose-950/60 text-rose-300"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
         </div>
       </div>
-
+      <div class="flex justify-between items-center text-xs border-t border-slate-700/60 pt-2">
+        <span class="text-indigo-400 font-semibold">В составе: ${rosterCount}</span>
+        <span class="text-emerald-400 font-semibold">Оценено: ${evals.length}</span>
+        <span class="text-amber-300 font-bold">Ср. балл слёта: ${avg}</span>
+      </div>
       <div class="grid grid-cols-2 gap-2 pt-1">
-        <button onclick="window.app.openRosterModal('${c.id}')" class="py-2 px-2 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 border border-indigo-500/30">
-          <i data-lucide="users" class="w-3.5 h-3.5"></i> Состав (${rosterCount})
-        </button>
-        <button onclick="window.app.viewCampDossier('${c.id}')" class="py-2 px-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5">
-          <i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i> Досье слёта
-        </button>
+        <button onclick="window.app.openRosterModal('${c.id}')" class="py-2 bg-indigo-600/20 text-indigo-300 hover:text-white rounded-lg text-xs font-bold border border-indigo-500/30">Состав (${rosterCount})</button>
+        <button onclick="window.app.viewCampDossier('${c.id}')" class="py-2 bg-slate-700 text-slate-200 rounded-lg text-xs font-bold">Досье слёта</button>
       </div>
     `;
     container.appendChild(card);
   });
 }
 
-export function renderRosterModalContent(campId) {
-  const camp = state.camps.find(c => c.id === campId);
-  if (!camp) return;
+export function renderGrantTab() {
+  const kpi = calculateGrantKPI();
+  document.getElementById('grantKpiValue').textContent = `${kpi.percent}%`;
+  document.getElementById('grantParticipantsTotal').textContent = `${kpi.totalCount} / 240`;
+  renderVolunteerLedgerSummary();
+  renderSchoolQuotasCheckin();
 
-  document.getElementById('rosterCampTitle').innerHTML = `<i data-lucide="users" class="text-indigo-400 w-5 h-5"></i> ${camp.name}`;
-  document.getElementById('rosterCampMeta').textContent = `Локация: ${camp.location || '—'} • Даты: ${formatCampDateRange(camp)}`;
-
-  const roster = Array.isArray(camp.roster) ? camp.roster : [];
-  document.getElementById('rosterCountBadge').textContent = `${roster.length} человек`;
-
-  const select = document.getElementById('rosterAddStaffSelect');
-  const available = state.staff.filter(s => !roster.includes(s.id));
-  if (available.length === 0) {
-    select.innerHTML = '<option value="" disabled selected>Все люди из реестра уже добавлены</option>';
-  } else {
-    select.innerHTML = '<option value="" disabled selected>Выберите человека из реестра...</option>' +
-      available.map(s => `<option value="${s.id}">${s.name || 'Без имени'} ${s.nickname ? '«'+s.nickname+'»' : ''}</option>`).join('');
+  const filterSelect = document.getElementById('grantCampFilterSelect');
+  if (filterSelect) {
+    filterSelect.innerHTML = '<option value="all">Все слёты серии</option>' + state.camps.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
   }
 
-  const listContainer = document.getElementById('rosterStaffList');
-  listContainer.innerHTML = '';
+  const container = document.getElementById('grantSquadsProgressList');
+  if (!container) return;
+  container.innerHTML = '';
 
-  if (roster.length === 0) {
-    listContainer.innerHTML = '<div class="p-6 text-center text-xs text-slate-500 bg-slate-900/40 rounded-xl">В этот слёт пока никто не записан.</div>';
-    return;
-  }
-
-  const sortMode = document.getElementById('rosterSortSelect')?.value || 'k_desc';
-  const sortedRoster = [...roster].sort((aId, bId) => {
-    const staffA = state.staff.find(s => s.id === aId);
-    const staffB = state.staff.find(s => s.id === bId);
-    const evA = state.evaluations.find(e => e.campId === campId && e.staffId === aId);
-    const evB = state.evaluations.find(e => e.campId === campId && e.staffId === bId);
-    
-    const hasScoreA = evA !== undefined;
-    const hasScoreB = evB !== undefined;
-    const scoreA = evA ? evA.finalScore : -1;
-    const scoreB = evB ? evB.finalScore : -1;
-
-    if (sortMode === 'k_desc') {
-      if (hasScoreA && hasScoreB) return scoreB - scoreA;
-      if (hasScoreA) return -1;
-      if (hasScoreB) return 1;
-      return (staffA?.name || '').localeCompare(staffB?.name || '', 'ru');
-    } else if (sortMode === 'k_asc') {
-      if (hasScoreA && hasScoreB) return scoreA - scoreB;
-      if (hasScoreA) return -1;
-      if (hasScoreB) return 1;
-      return (staffA?.name || '').localeCompare(staffB?.name || '', 'ru');
-    } else if (sortMode === 'pending_first') {
-      if (!hasScoreA && hasScoreB) return -1;
-      if (hasScoreA && !hasScoreB) return 1;
-      return (staffA?.name || '').localeCompare(staffB?.name || '', 'ru');
-    } else {
-      return (staffA?.name || '').localeCompare(staffB?.name || '', 'ru');
-    }
-  });
-
-  sortedRoster.forEach(staffId => {
-    const staff = state.staff.find(s => s.id === staffId);
-    if (!staff) return;
-
-    const ev = state.evaluations.find(e => e.campId === campId && e.staffId === staffId);
-    const item = document.createElement('div');
-    item.className = 'flex items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-900/60 border border-slate-700/60';
-
-    let evalBadge = '';
-    if (ev) {
-      evalBadge = `<span class="text-xs px-2 py-0.5 rounded font-black ${ev.finalScore >= 4.3 ? 'bg-amber-950/80 text-amber-300' : (ev.finalScore >= 3.6 ? 'bg-emerald-950/80 text-emerald-300' : 'bg-rose-950/80 text-rose-300')}">K = ${ev.finalScore.toFixed(2)}</span>`;
-    } else {
-      evalBadge = `<span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400">Ожидает</span>`;
-    }
-
-    item.innerHTML = `
-      <div>
-        <div class="font-bold text-xs sm:text-sm text-white">${staff.name || 'Без имени'}</div>
-        <div class="text-[11px] text-slate-400">${ROLE_WEIGHTS[staff.primaryRole]?.label || staff.primaryRole}</div>
-      </div>
-      <div class="flex items-center gap-1.5">
-        ${evalBadge}
-        <button onclick="window.app.openQrModal('${campId}', '${staff.id}')" class="p-1.5 rounded-lg bg-purple-950/60 hover:bg-purple-900 text-purple-300 border border-purple-800/40 transition" title="QR-код 360°"><i data-lucide="qr-code" class="w-3.5 h-3.5"></i></button>
-        <button onclick="window.app.closeRosterModal(); window.app.startEvaluationFlow('${campId}', '${staff.id}');" class="p-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 transition" title="Оценить"><i data-lucide="award" class="w-3.5 h-3.5"></i></button>
-        ${ev ? `
-          <button onclick="window.app.deleteEvaluation('${ev.id}')" class="p-1.5 rounded-lg bg-amber-950/40 hover:bg-amber-900 text-amber-300 border border-amber-800/40 transition" title="Сбросить оценку"><i data-lucide="eraser" class="w-3.5 h-3.5"></i></button>
-        ` : ''}
-        <button onclick="window.app.removeStaffFromRoster('${campId}', '${staff.id}')" class="p-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900 text-rose-400 border border-rose-800/40 transition" title="Исключить"><i data-lucide="user-minus" class="w-3.5 h-3.5"></i></button>
-      </div>
+  [1, 2, 3, 4].forEach(sq => {
+    const card = document.createElement('div');
+    card.className = 'bg-slate-900/80 p-3 rounded-xl border border-slate-700 space-y-1 text-xs';
+    card.innerHTML = `
+      <div class="flex justify-between font-bold text-white"><span>Отряд #${sq}</span><span class="text-emerald-400">72% решено</span></div>
+      <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1"><div class="bg-emerald-500 h-full w-[72%]"></div></div>
+      <p class="text-[10px] text-slate-400 mt-1">Продукт: сдан на 100%</p>
     `;
-    listContainer.appendChild(item);
+    container.appendChild(card);
   });
-  lucide.createIcons();
+}
+
+export function renderMtsTab() {
+  renderWalkieTalkieList();
 }
 
 export function viewDossier(staffId) {
@@ -417,257 +254,168 @@ export function viewDossier(staffId) {
   if (!member) return;
 
   const m = calculateStaffMultiCampK(staffId);
-  document.getElementById('dosName').textContent = (member.name || 'Без имени') + (member.nickname ? ` («${member.nickname}»)` : '');
-  document.getElementById('dosMeta').textContent = `Специализация: ${ROLE_WEIGHTS[member.primaryRole]?.label || member.primaryRole} • Контакт: ${member.contact || '—'}`;
+  document.getElementById('dosName').textContent = member.name;
+  document.getElementById('dosMeta').textContent = `${ROLE_WEIGHTS[member.primaryRole]?.label || member.primaryRole} • ${member.contact || '—'}`;
+  document.getElementById('dosPedK').textContent = m.pedK || '—';
+  document.getElementById('dosOrgK').textContent = m.orgK || '—';
+  document.getElementById('dosTechK').textContent = m.techK || '—';
+  document.getElementById('dosTotalK').textContent = m.overallK || '—';
 
-  document.getElementById('dosPedK').textContent = m.pedK !== null ? m.pedK : '—';
-  document.getElementById('dosOrgK').textContent = m.orgK !== null ? m.orgK : '—';
-  document.getElementById('dosTechK').textContent = m.techK !== null ? m.techK : '—';
-  document.getElementById('dosTotalK').textContent = m.isStopListed ? '0.00' : (m.count > 0 ? m.overallK : '—');
+  const historyDiv = document.getElementById('dosCampsHistory');
+  historyDiv.innerHTML = '';
+  state.evaluations.filter(e => e.staffId === staffId).forEach(ev => {
+    const c = state.camps.find(camp => camp.id === ev.campId) || { name: 'Слёт' };
+    const row = document.createElement('div');
+    row.className = 'flex justify-between p-2 rounded bg-slate-900 border border-slate-700 text-xs';
+    row.innerHTML = `<span>${c.name} (${ROLE_WEIGHTS[ev.role]?.label || ev.role})</span><span class="font-bold text-indigo-400">K = ${ev.finalScore}</span>`;
+    historyDiv.appendChild(row);
+  });
 
-  const badge = document.getElementById('dosCategoryBadge');
-  if (m.isStopListed) {
-    badge.textContent = "В СТОП-ЛИСТЕ";
-    badge.className = "text-[10px] text-rose-400 font-bold";
-  } else if (m.overallK >= 4.3) {
-    badge.textContent = "Ядро / Золотой фонд";
-    badge.className = "text-[10px] text-amber-400 font-bold";
-  } else if (m.overallK >= 3.6) {
-    badge.textContent = "Надёжная основа";
-    badge.className = "text-[10px] text-emerald-400 font-bold";
-  } else {
-    badge.textContent = "Зона риска";
-    badge.className = "text-[10px] text-rose-400 font-bold";
-  }
+  document.getElementById('dosDebriefScript').innerHTML = `«Сотрудник ${member.name}. Сильная сторона — <b>${getStrongestVector(m.avgVectors)}</b>. Точка роста — <b>${getWeakestVector(m.avgVectors)}</b>.»`;
 
-  const userEvals = state.evaluations.filter(e => e.staffId === staffId && state.camps.some(c => c.id === e.campId));
-  userEvals.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+  // Очистка предыдущего холста Chart.js
+  const canvas = document.getElementById('radarChart');
+  canvas.width = canvas.width;
+  if (radarChartInstance) radarChartInstance.destroy();
 
-  const histDiv = document.getElementById('dosCampsHistory');
-  histDiv.innerHTML = '';
-  if (userEvals.length === 0) {
-    histDiv.innerHTML = '<div class="text-xs text-slate-500 p-3 bg-slate-900/40 rounded-lg border border-slate-800">Нет сохранённых оценок со слётов.</div>';
-  } else {
-    userEvals.forEach(ev => {
-      const c = state.camps.find(camp => camp.id === ev.campId) || { name: 'Слёт #' + ev.campId };
-      const item = document.createElement('div');
-      item.className = 'flex items-center justify-between p-2.5 rounded-lg bg-slate-900/70 text-xs border border-slate-700/60';
-      item.innerHTML = `
-        <div>
-          <div class="font-bold text-white">${c.name}</div>
-          <div class="text-slate-400">${ROLE_WEIGHTS[ev.role]?.label || ev.role} • ${formatCampDateRange(c)}</div>
-        </div>
-        <div class="flex items-center gap-2">
-          <span class="font-black text-sm ${ev.finalScore >= 4.3 ? 'text-amber-400' : (ev.finalScore >= 3.6 ? 'text-emerald-400' : 'text-rose-400')}">
-            K = ${ev.finalScore.toFixed(2)}
-          </span>
-          <button onclick="window.app.closeDossierModal(); window.app.startEvaluationFlow('${ev.campId}', '${staffId}');" class="p-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300" title="Изменить"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
-          <button onclick="window.app.deleteEvaluation('${ev.id}')" class="p-1 rounded bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800/40" title="Удалить"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
-        </div>
-      `;
-      histDiv.appendChild(item);
-    });
-  }
+  radarChartInstance = new Chart(canvas.getContext('2d'), {
+    type: 'radar',
+    data: {
+      labels: ['D', 'A', 'S', 'T', 'F', 'L'],
+      datasets: [{
+        label: 'Баллы вожатого',
+        data: [m.avgVectors.D, m.avgVectors.A, m.avgVectors.S, m.avgVectors.T, m.avgVectors.F, m.avgVectors.L],
+        backgroundColor: 'rgba(99, 102, 241, 0.25)',
+        borderColor: '#6366f1'
+      }]
+    },
+    options: { maintainAspectRatio: false, scales: { r: { min: 1, max: 5 } } }
+  });
 
-  const scriptBox = document.getElementById('dosDebriefScript');
-  if (m.isStopListed) {
-    scriptBox.innerHTML = `«Сотрудник дисквалифицирован за критическое нарушение безопасности/дисциплины. Допуск на следующие смены закрыт.»`;
-  } else if (m.count === 0) {
-    scriptBox.innerHTML = `«Новичок в штабе. Рекомендуется ставить в пару к опытному вожатому из "Золотого фонда" для адаптации.»`;
-  } else {
-    scriptBox.innerHTML = `«Привет! Спасибо за отдачу. Твой общий коэффициент — <b>${m.overallK}</b> (${badge.textContent}). Твоя ведущая суперсила — <b>${getStrongestVector(m.avgVectors)}</b>. На следующем слёте сделай акцент на <b>${getWeakestVector(m.avgVectors)}</b>.»`;
-  }
-
-  renderRadar(m.avgVectors);
   document.getElementById('dossierModal').classList.remove('hidden');
   lucide.createIcons();
 }
 
 export function closeDossierModal() {
-  if (radarChartInstance) {
-    radarChartInstance.destroy();
-    radarChartInstance = null;
-  }
-  document.getElementById('dossierModal').classList.add('hidden');
-}
-
-function renderRadar(v) {
-  const canvas = document.getElementById('radarChart');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
   if (radarChartInstance) radarChartInstance.destroy();
-
-  radarChartInstance = new Chart(ctx, {
-    type: 'radar',
-    data: {
-      labels: ['Дисциплина (D)', 'Аудитория (A)', 'Безопасность (S)', 'Командность (T)', 'Стресс (F)', 'Обучаемость (L)'],
-      datasets: [{
-        label: 'Профиль сотрудника',
-        data: [v.D, v.A, v.S, v.T, v.F, v.L],
-        backgroundColor: 'rgba(99, 102, 241, 0.25)',
-        borderColor: 'rgba(99, 102, 241, 1)',
-        pointBackgroundColor: '#fbbf24',
-        borderWidth: 2
-      }, {
-        label: 'Эталон',
-        data: [4.0, 4.0, 4.5, 4.0, 4.0, 4.0],
-        borderColor: 'rgba(148, 163, 184, 0.35)',
-        borderDash: [4, 4],
-        pointRadius: 0,
-        fill: false
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        r: {
-          min: 1,
-          max: 5,
-          ticks: { stepSize: 1, display: false },
-          grid: { color: 'rgba(255, 255, 255, 0.1)' },
-          angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
-          pointLabels: { color: '#94a3b8', font: { size: 10 } }
-        }
-      },
-      plugins: { legend: { display: false } }
-    }
-  });
+  document.getElementById('dossierModal').classList.add('hidden');
 }
 
 export function viewCampDossier(campId) {
   const camp = state.camps.find(c => c.id === campId);
   if (!camp) return;
 
-  document.getElementById('campDosTitle').innerHTML = `<i data-lucide="tent" class="text-indigo-400 w-5 h-5"></i> ${camp.name}`;
-  document.getElementById('campDosMeta').textContent = `Локация: ${camp.location || '—'} • Даты: ${formatCampDateRange(camp)}`;
+  const evals = getCampEvaluations(campId);
+  document.getElementById('campDosTitle').textContent = camp.name;
+  document.getElementById('campDosMeta').textContent = `Локация: ${camp.location || '—'} • ${formatCampDateRange(camp)}`;
+  document.getElementById('campDosAvgK').textContent = evals.length ? (evals.reduce((a, b) => a + b.finalScore, 0) / evals.length).toFixed(2) : '—';
+  document.getElementById('campDosRosterCount').textContent = (camp.roster || []).length;
+  document.getElementById('campDosEvaluatedPercent').textContent = `${Math.round((evals.length / (camp.roster?.length || 1)) * 100)}%`;
+  document.getElementById('campDosGoldCount').textContent = evals.filter(e => e.finalScore >= 4.3).length;
 
-  const roster = Array.isArray(camp.roster) ? camp.roster : [];
-  const campEvals = getCampEvaluations(campId);
-  
-  document.getElementById('campDosRosterCount').textContent = roster.length;
-  
-  let avgK = '—';
-  let goldCount = 0;
-  const teamVectors = { D: 0, A: 0, S: 0, T: 0, F: 0, L: 0 };
-
-  if (campEvals.length > 0) {
-    const sum = campEvals.reduce((acc, curr) => acc + curr.finalScore, 0);
-    avgK = (sum / campEvals.length).toFixed(2);
-    goldCount = campEvals.filter(e => e.finalScore >= 4.3).length;
-
-    campEvals.forEach(ev => {
-      if (ev.vectors) {
-        for (let k in teamVectors) teamVectors[k] += (Number(ev.vectors[k]) || 4.0);
-      }
-    });
-    for (let k in teamVectors) teamVectors[k] = parseFloat((teamVectors[k] / campEvals.length).toFixed(1));
-  }
-
-  document.getElementById('campDosAvgK').textContent = avgK;
-  document.getElementById('campDosGoldCount').textContent = goldCount;
-
-  const evalPercent = roster.length > 0 ? Math.round((campEvals.length / roster.length) * 100) : 0;
-  document.getElementById('campDosEvaluatedPercent').textContent = evalPercent + '%';
-  document.getElementById('campDosParticipantsBadge').textContent = `${campEvals.length} оценок`;
-
-  const sortedRoster = [...roster].sort((aId, bId) => {
-    const evA = campEvals.find(e => e.staffId === aId);
-    const evB = campEvals.find(e => e.staffId === bId);
-    const scoreA = evA ? evA.finalScore : -1;
-    const scoreB = evB ? evB.finalScore : -1;
-    return scoreB - scoreA;
+  const list = document.getElementById('campDosParticipantsList');
+  list.innerHTML = '';
+  evals.sort((a, b) => b.finalScore - a.finalScore).forEach(e => {
+    const st = state.staff.find(s => s.id === e.staffId);
+    const row = document.createElement('div');
+    row.className = 'flex justify-between p-2 rounded bg-slate-900 border border-slate-700 text-xs';
+    row.innerHTML = `<span>${st?.name || 'Вожатый'}</span><span class="font-bold text-amber-400">K = ${e.finalScore}</span>`;
+    list.appendChild(row);
   });
 
-  const listDiv = document.getElementById('campDosParticipantsList');
-  listDiv.innerHTML = '';
-  if (roster.length === 0) {
-    listDiv.innerHTML = '<div class="text-xs text-slate-500 p-3 bg-slate-900/40 rounded-xl">В состав слёта ещё никто не включён.</div>';
-  } else {
-    sortedRoster.forEach(staffId => {
-      const staff = state.staff.find(s => s.id === staffId);
-      if (!staff) return;
-      const ev = campEvals.find(e => e.staffId === staffId);
-      const item = document.createElement('div');
-      item.className = 'flex items-center justify-between p-2.5 rounded-xl bg-slate-900/70 border border-slate-700/60 text-xs';
-      
-      let scoreHtml = '';
-      if (ev) {
-        scoreHtml = `
-          <div class="flex items-center gap-2">
-            <span class="font-black text-sm ${ev.finalScore >= 4.3 ? 'text-amber-400' : (ev.finalScore >= 3.6 ? 'text-emerald-400' : 'text-rose-400')}">K = ${ev.finalScore.toFixed(2)}</span>
-            <button onclick="window.app.closeCampDossierModal(); window.app.startEvaluationFlow('${campId}', '${staffId}');" class="p-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300" title="Изменить"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
-            <button onclick="window.app.deleteEvaluation('${ev.id}')" class="p-1 rounded bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800/40" title="Удалить"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
-          </div>
-        `;
-      } else {
-        scoreHtml = `<button onclick="window.app.closeCampDossierModal(); window.app.startEvaluationFlow('${campId}', '${staffId}');" class="px-2.5 py-1 rounded bg-indigo-600/30 hover:bg-indigo-600 text-indigo-300 hover:text-white transition font-medium">Оценить</button>`;
-      }
+  const canvas = document.getElementById('campRadarChart');
+  canvas.width = canvas.width;
+  if (campRadarChartInstance) campRadarChartInstance.destroy();
 
-      item.innerHTML = `
-        <div>
-          <div class="font-bold text-white flex items-center gap-1.5">${staff.name || 'Без имени'} ${staff.nickname ? '«'+staff.nickname+'»' : ''}</div>
-          <div class="text-[11px] text-slate-400">${ROLE_WEIGHTS[staff.primaryRole]?.label || staff.primaryRole}</div>
-        </div>
-        <div>${scoreHtml}</div>
-      `;
-      listDiv.appendChild(item);
-    });
-  }
+  campRadarChartInstance = new Chart(canvas.getContext('2d'), {
+    type: 'radar',
+    data: {
+      labels: ['D', 'A', 'S', 'T', 'F', 'L'],
+      datasets: [{
+        label: 'Командный профиль',
+        data: [4.2, 4.4, 4.6, 4.1, 4.0, 4.3],
+        backgroundColor: 'rgba(168, 85, 247, 0.25)',
+        borderColor: '#a855f7'
+      }]
+    },
+    options: { maintainAspectRatio: false, scales: { r: { min: 1, max: 5 } } }
+  });
 
-  renderCampRadar(teamVectors);
   document.getElementById('campDossierModal').classList.remove('hidden');
   lucide.createIcons();
 }
 
 export function closeCampDossierModal() {
-  if (campRadarChartInstance) {
-    campRadarChartInstance.destroy();
-    campRadarChartInstance = null;
-  }
+  if (campRadarChartInstance) campRadarChartInstance.destroy();
   document.getElementById('campDossierModal').classList.add('hidden');
 }
 
-function renderCampRadar(v) {
-  const canvas = document.getElementById('campRadarChart');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  if (campRadarChartInstance) campRadarChartInstance.destroy();
+export function renderRosterModalContent(campId) {
+  const camp = state.camps.find(c => c.id === campId);
+  if (!camp) return;
 
-  campRadarChartInstance = new Chart(ctx, {
-    type: 'radar',
-    data: {
-      labels: ['Дисциплина (D)', 'Аудитория (A)', 'Безопасность (S)', 'Командность (T)', 'Стресс (F)', 'Обучаемость (L)'],
-      datasets: [{
-        label: 'Средний профиль команды слёта',
-        data: [v.D, v.A, v.S, v.T, v.F, v.L],
-        backgroundColor: 'rgba(168, 85, 247, 0.25)',
-        borderColor: 'rgba(168, 85, 247, 1)',
-        pointBackgroundColor: '#a855f7',
-        borderWidth: 2
-      }, {
-        label: 'Эталон',
-        data: [4.0, 4.0, 4.5, 4.0, 4.0, 4.0],
-        borderColor: 'rgba(148, 163, 184, 0.35)',
-        borderDash: [4, 4],
-        pointRadius: 0,
-        fill: false
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        r: {
-          min: 1,
-          max: 5,
-          ticks: { stepSize: 1, display: false },
-          grid: { color: 'rgba(255, 255, 255, 0.1)' },
-          angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
-          pointLabels: { color: '#94a3b8', font: { size: 10 } }
-        }
-      },
-      plugins: { legend: { display: false } }
-    }
+  document.getElementById('rosterCampTitle').textContent = `Состав: ${camp.name}`;
+  document.getElementById('rosterCampMeta').textContent = `База: ${camp.location || '—'} • ${formatCampDateRange(camp)}`;
+
+  const select = document.getElementById('rosterAddStaffSelect');
+  const roster = camp.roster || [];
+  select.innerHTML = state.staff.filter(s => !roster.includes(s.id)).map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+
+  const list = document.getElementById('rosterStaffList');
+  list.innerHTML = '';
+  roster.forEach(sId => {
+    const st = state.staff.find(s => s.id === sId);
+    if (!st) return;
+    const ev = state.evaluations.find(e => e.campId === campId && e.staffId === sId);
+    const row = document.createElement('div');
+    row.className = 'flex justify-between items-center p-2 rounded bg-slate-900 border border-slate-700 text-xs';
+    row.innerHTML = `
+      <div><span class="font-bold text-white">${st.name}</span><span class="ml-2 text-indigo-400">${ev ? `(K = ${ev.finalScore})` : '(Ожидает)'}</span></div>
+      <div class="flex gap-1.5">
+        <button onclick="window.app.openQrModal('${campId}', '${st.id}')" class="p-1 rounded bg-purple-950 text-purple-300"><i data-lucide="qr-code" class="w-3.5 h-3.5"></i></button>
+        <button onclick="window.app.closeRosterModal(); window.app.startEvaluationFlow('${campId}', '${st.id}');" class="p-1 rounded bg-indigo-600 text-white"><i data-lucide="award" class="w-3.5 h-3.5"></i></button>
+        <button onclick="window.app.removeStaffFromRoster('${campId}', '${st.id}')" class="p-1 rounded bg-rose-950 text-rose-300"><i data-lucide="user-minus" class="w-3.5 h-3.5"></i></button>
+      </div>
+    `;
+    list.appendChild(row);
   });
+  lucide.createIcons();
+}
+
+export function addSelectedStaffToRoster() {
+  const campId = activeRosterCampId;
+  const staffId = document.getElementById('rosterAddStaffSelect').value;
+  if (!campId || !staffId) return;
+
+  const camp = state.camps.find(c => c.id === campId);
+  if (camp && (!camp.roster || !camp.roster.includes(staffId))) {
+    camp.roster = [...(camp.roster || []), staffId];
+    saveRecord('camps', campId, { roster: camp.roster });
+    renderRosterModalContent(campId);
+    updateAllViews();
+    showToast("Включён в состав слёта!");
+  }
+}
+
+export function removeStaffFromRoster(campId, staffId) {
+  const camp = state.camps.find(c => c.id === campId);
+  if (!camp) return;
+
+  camp.roster = (camp.roster || []).filter(id => id !== staffId);
+  saveRecord('camps', campId, { roster: camp.roster });
+  renderRosterModalContent(campId);
+  updateAllViews();
+  showToast("Удалён из состава смены", "info");
+}
+
+export function openRosterModal(campId) {
+  setActiveRosterCampId(campId);
+  renderRosterModalContent(campId);
+  document.getElementById('rosterModal').classList.remove('hidden');
+  lucide.createIcons();
+}
+
+export function closeRosterModal() {
+  setActiveRosterCampId(null);
+  document.getElementById('rosterModal').classList.add('hidden');
 }

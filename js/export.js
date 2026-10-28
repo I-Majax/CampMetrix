@@ -10,7 +10,7 @@ export function exportXLSX(staffList, campsList, evaluationsList) {
 
   const wb = XLSX.utils.book_new();
 
-  // Лист 1: Реестр команды
+  // Лист 1: Реестр оргсостава
   const staffRows = staffList.map(s => {
     const m = calculateStaffMultiCampK(s.id);
     const badge = getCategoryBadge(m);
@@ -25,59 +25,42 @@ export function exportXLSX(staffList, campsList, evaluationsList) {
       "Технический K": m.techK !== null ? Number(m.techK) : "",
       "Итоговый K-индекс": m.isStopListed ? 0 : Number(m.overallK) || 0,
       "Тренд": m.trend,
-      "Статус в лагере": badge.label
+      "Статус": badge.label
     };
   });
-  const wsStaff = XLSX.utils.json_to_sheet(staffRows);
-  XLSX.utils.book_append_sheet(wb, wsStaff, "Реестр команды");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(staffRows), "Реестр команды");
 
-  // Лист 2: Оценки по слётам
+  // Лист 2: Оценки слётов
   const evalRows = evaluationsList.map(e => {
     const staff = staffList.find(s => s.id === e.staffId);
     const camp = campsList.find(c => c.id === e.campId);
     return {
       "Сотрудник": staff ? (staff.name || "Без имени") : e.staffId,
-      "Слёт / Смена": camp ? camp.name : e.campId,
-      "Локация": camp ? (camp.location || "") : "",
-      "Даты слёта": formatCampDateRange(camp),
-      "Роль на смене": ROLE_WEIGHTS[e.role]?.label || e.role,
-      "Оценка за слёт (K)": Number(e.finalScore) || 0,
-      "Режим 360°": e.is360 ? "Да" : "Нет",
-      "Куратор (360)": e.eval360?.curatorScore ?? "",
-      "Напарник (360)": e.eval360?.partnerScore ?? "",
-      "Отряд (360)": e.eval360?.squadScore ?? "",
-      "D (Дисциплина)": e.vectors?.D !== undefined ? Number(e.vectors.D) : "",
-      "A (Аудитория)": e.vectors?.A !== undefined ? Number(e.vectors.A) : "",
-      "S (Безопасность)": e.vectors?.S !== undefined ? Number(e.vectors.S) : "",
-      "T (Командность)": e.vectors?.T !== undefined ? Number(e.vectors.T) : "",
-      "F (Стресс)": e.vectors?.F !== undefined ? Number(e.vectors.F) : "",
-      "L (Обучаемость)": e.vectors?.L !== undefined ? Number(e.vectors.L) : "",
-      "Дата фиксации": e.timestamp ? new Date(e.timestamp).toLocaleDateString('ru-RU') : ""
+      "Слёт": camp ? camp.name : e.campId,
+      "Роль": ROLE_WEIGHTS[e.role]?.label || e.role,
+      "Оценка K": Number(e.finalScore) || 0,
+      "D (Тайминг)": Number(e.vectors?.D) || 0,
+      "A (Аудитория)": Number(e.vectors?.A) || 0,
+      "S (Безопасность)": Number(e.vectors?.S) || 0,
+      "T (Командность)": Number(e.vectors?.T) || 0,
+      "F (Форс-мажор)": Number(e.vectors?.F) || 0,
+      "L (Обучаемость)": Number(e.vectors?.L) || 0,
+      "Режим 360°": e.is360 ? "Да" : "Нет"
     };
   });
-  const wsEvals = XLSX.utils.json_to_sheet(evalRows);
-  XLSX.utils.book_append_sheet(wb, wsEvals, "Оценки по слётам");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(evalRows), "Оценки 360°");
 
-  // Лист 3: Сводка слётов
-  const campRows = campsList.map(c => {
-    const rosterCount = (Array.isArray(c.roster) ? c.roster : []).length;
-    const campEvals = getCampEvaluations(c.id);
-    const avg = campEvals.length > 0 ? Number((campEvals.reduce((a, b) => a + b.finalScore, 0) / campEvals.length).toFixed(2)) : "";
-    return {
-      "Название слёта": c.name || "Без названия",
-      "Локация / База": c.location || "",
-      "Даты проведения": formatCampDateRange(c),
-      "Дата начала": c.startDate || "",
-      "Дата окончания": c.endDate || "",
-      "Человек в составе": Number(rosterCount) || 0,
-      "Оценено сотрудников": Number(campEvals.length) || 0,
-      "Средний K команды": avg
-    };
-  });
-  const wsCamps = XLSX.utils.json_to_sheet(campRows);
-  XLSX.utils.book_append_sheet(wb, wsCamps, "Сводка слётов");
+  // Лист 3: Волонтёрский вклад (Софинансирование 552 861 ₽)
+  const volRows = [
+    { "Статья софинансирования": "Вожатые на отрядах (8 чел)", "Часов на слёт": 50, "Слётов": 3, "Сумма вклада": 244140 },
+    { "Статья софинансирования": "Медиа-служба / Фото-видео (2 чел)", "Часов на слёт": 50, "Слётов": 3, "Сумма вклада": 176250 },
+    { "Статья софинансирования": "Техническая служба МТС (1 чел)", "Часов на слёт": 50, "Слётов": 3, "Сумма вклада": 52368 },
+    { "Статья софинансирования": "Дизайнер полиграфии и бейджей", "Часов на слёт": 5, "Слётов": 3, "Сумма вклада": 4503 },
+    { "Статья софинансирования": "Оборудование команды (ноутбук, камеры)", "Часов на слёт": "—", "Слётов": 3, "Сумма вклада": 75600 },
+    { "ИТОГО СОБСТВЕННЫЙ ВКЛАД": "Грантовый проект «Бесконечная история»", "Часов на слёт": "—", "Слётов": 3, "Сумма вклада": 552861 }
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(volRows), "Табель софинансирования");
 
-  const fileName = `CampMetrix_360_Export_${new Date().toISOString().slice(0, 10)}.xlsx`;
-  XLSX.writeFile(wb, fileName);
-  showToast("Отчёт успешно выгружен в Excel (.xlsx)!", "success");
+  XLSX.writeFile(wb, `CampMetrix_Report_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  showToast("Отчёт выгружен в Excel!", "success");
 }
