@@ -3,7 +3,6 @@ import { ROLE_WEIGHTS } from './config.js';
 import { formatCampDateRange } from './calc.js';
 import { pickFromContacts, handleVcfFileSelected } from './contacts.js';
 import { exportXLSX } from './export.js';
-import { initGrantProjectDemo, renderSchoolQuotasCheckin } from './grant.js';
 import { 
   openSmartPairingModal, 
   closePairingModal, 
@@ -20,6 +19,12 @@ import {
   openSurveyOnCurrentDevice 
 } from './survey.js';
 import { 
+  replaceFromReserve, 
+  deleteSchool, 
+  renderNightShiftsList, 
+  deleteNightShift 
+} from './grant.js';
+import { 
   showToast, 
   showConfirmDialog, 
   switchTab, 
@@ -33,8 +38,6 @@ import {
   openRosterModal,
   closeRosterModal,
   renderRosterModalContent,
-  addSelectedStaffToRoster,
-  removeStaffFromRoster,
   activeRosterCampId,
   setActiveRosterCampId
 } from './ui.js';
@@ -43,16 +46,12 @@ let evalSessionCampId = null;
 let evalSessionStaffId = null;
 let evalSessionExistingDocId = null;
 
-// Инициализация при загрузке документа
 document.addEventListener('DOMContentLoaded', () => {
   lucide.createIcons();
   checkGuestUrlParams();
 
   initStorageAndFirebase(
-    () => {
-      initGrantProjectDemo();
-      updateAllViews();
-    },
+    () => updateAllViews(),
     (isOnline) => {
       const text = document.getElementById('cloudStatusText');
       const dot = document.getElementById('cloudStatusDot');
@@ -76,11 +75,10 @@ function setupRoleDropdowns() {
 }
 
 function bindDOMEvents() {
-  // Навигация
+  // Навигация (МТС исключён)
   document.getElementById('tabBtn-registry')?.addEventListener('click', () => switchTab('registry'));
   document.getElementById('tabBtn-camps')?.addEventListener('click', () => switchTab('camps'));
   document.getElementById('tabBtn-grant')?.addEventListener('click', () => switchTab('grant'));
-  document.getElementById('tabBtn-mts')?.addEventListener('click', () => switchTab('mts'));
 
   document.getElementById('btnStartEvalHeader')?.addEventListener('click', () => startEvaluationFlow());
   document.getElementById('btnExportXlsx')?.addEventListener('click', () => exportXLSX(state.staff, state.camps, state.evaluations));
@@ -110,7 +108,7 @@ function bindDOMEvents() {
   document.getElementById('btnCancelCampModal')?.addEventListener('click', () => closeCampModal());
   document.getElementById('campForm')?.addEventListener('submit', handleCampSubmit);
 
-  // Состав слёта (Ростер)
+  // Ростер
   document.getElementById('btnCloseRosterModal')?.addEventListener('click', () => closeRosterModal());
   document.getElementById('btnAddStaffToRoster')?.addEventListener('click', addSelectedStaffToRoster);
   document.getElementById('rosterSortSelect')?.addEventListener('change', () => renderRosterModalContent(activeRosterCampId));
@@ -139,7 +137,7 @@ function bindDOMEvents() {
     document.getElementById(id)?.addEventListener('change', calculateWizardScore);
   });
 
-  // Модальные окна досье
+  // Модальные окна
   document.getElementById('btnCloseDossierModal')?.addEventListener('click', closeDossierModal);
   document.getElementById('btnCloseCampDossierModal')?.addEventListener('click', closeCampDossierModal);
 
@@ -149,7 +147,7 @@ function bindDOMEvents() {
   document.getElementById('btnRegeneratePairs')?.addEventListener('click', generateAutoPairs);
   document.getElementById('btnSavePairing')?.addEventListener('click', saveFormedPairs);
 
-  // QR Modal
+  // QR
   document.getElementById('btnCloseQrModal')?.addEventListener('click', closeQrModal);
   document.getElementById('qrBtnTypePartner')?.addEventListener('click', () => switchQrType('partner'));
   document.getElementById('qrBtnTypeSquad')?.addEventListener('click', () => switchQrType('squad'));
@@ -159,61 +157,73 @@ function bindDOMEvents() {
   // Гостевой опрос
   document.getElementById('guestFeedbackForm')?.addEventListener('submit', submitGuestFeedback);
 
-  // График ночных дежурств
+  // Школы и ночные дежурства (пользовательский ввод)
+  document.getElementById('btnOpenAddSchoolModal')?.addEventListener('click', openSchoolModal);
+  document.getElementById('btnCloseSchoolModal')?.addEventListener('click', closeSchoolModal);
+  document.getElementById('btnCancelSchoolModal')?.addEventListener('click', closeSchoolModal);
+  document.getElementById('schoolForm')?.addEventListener('submit', handleSchoolSubmit);
+
   document.getElementById('btnOpenNightShiftModal')?.addEventListener('click', openNightShiftModal);
   document.getElementById('btnCloseNightShiftModal')?.addEventListener('click', closeNightShiftModal);
-  document.getElementById('btnSaveNightShifts')?.addEventListener('click', saveNightShifts);
+  document.getElementById('btnSaveNightShifts')?.addEventListener('click', closeNightShiftModal);
+  document.getElementById('addNightShiftForm')?.addEventListener('submit', handleAddNightShift);
 }
 
-// Управление ночными дежурствами на матах
+// Управление школами (CRUD)
+function openSchoolModal() {
+  document.getElementById('schoolForm').reset();
+  document.getElementById('schoolModal').classList.remove('hidden');
+}
+
+function closeSchoolModal() {
+  document.getElementById('schoolModal').classList.add('hidden');
+}
+
+async function handleSchoolSubmit(e) {
+  e.preventDefault();
+  const data = {
+    name: document.getElementById('schoolNameInput').value.trim(),
+    quota: Number(document.getElementById('schoolQuotaInput').value),
+    reserve: Number(document.getElementById('schoolReserveInput').value),
+    arrived: Number(document.getElementById('schoolArrivedInput').value)
+  };
+  await saveRecord('schools', null, data);
+  showToast("Школа и квоты зафиксированы!");
+  closeSchoolModal();
+  updateAllViews();
+}
+
+// Управление дежурствами (CRUD)
 function openNightShiftModal() {
-  const container = document.getElementById('nightShiftTable');
-  container.innerHTML = '';
-  const shifts = [
-    { time: "23:00 – 01:00", lead: "Дьячков В.Е.", squad: "Вожатые 1 и 2 отрядов" },
-    { time: "01:00 – 03:00", lead: "Кузнецов Н.С.", squad: "Вожатые 3 и 4 отрядов" },
-    { time: "03:00 – 05:00", lead: "Дежурный организатор", squad: "Ночной дежурный вожатый" },
-    { time: "05:00 – 07:00", lead: "Корнеева С.Д.", squad: "Подъём и медконтроль" }
-  ];
-
-  shifts.forEach((s, idx) => {
-    const item = document.createElement('div');
-    item.className = 'flex justify-between items-center p-2 rounded bg-slate-900 border border-slate-700 text-xs';
-    item.innerHTML = `
-      <span class="font-bold text-amber-300">${s.time}</span>
-      <span class="text-white">${s.lead}</span>
-      <span class="text-slate-400">${s.squad}</span>
-    `;
-    container.appendChild(item);
-  });
-
+  renderNightShiftsList();
   document.getElementById('nightShiftModal').classList.remove('hidden');
-  lucide.createIcons();
 }
 
 function closeNightShiftModal() {
   document.getElementById('nightShiftModal').classList.add('hidden');
 }
 
-function saveNightShifts() {
-  showToast("График дежурств на слёте сохранён!", "success");
-  closeNightShiftModal();
+async function handleAddNightShift(e) {
+  e.preventDefault();
+  const shift = {
+    time: document.getElementById('shiftTimeInput').value.trim(),
+    lead: document.getElementById('shiftLeadInput').value.trim(),
+    sector: document.getElementById('shiftSectorInput').value.trim()
+  };
+  await saveRecord('nightShifts', null, shift);
+  document.getElementById('addNightShiftForm').reset();
+  renderNightShiftsList();
+  showToast("Смена дежурства добавлена!");
 }
 
-// Замена из резерва школы
-function replaceFromReserve(schoolName) {
-  showToast(`Запасной участник из резерва школы «${schoolName}» зачислен в отряд!`, "success");
-  renderSchoolQuotasCheckin();
-}
-
-// Работа мастера оценки
+// Визард оценки
 function startEvaluationFlow(campId = null, staffId = null) {
   if (state.camps.length === 0) {
-    showToast("Сначала создайте слёт!", "error");
+    showToast("Сначала создайте слёт во вкладке «Слёты»!", "error");
     return;
   }
   if (state.staff.length === 0) {
-    showToast("Сначала добавьте сотрудника!", "error");
+    showToast("Сначала добавьте сотрудника в реестр!", "error");
     return;
   }
 
@@ -249,11 +259,11 @@ function checkStep1EvaluationStatus() {
   const existing = state.evaluations.find(e => e.campId === campId && e.staffId === staffId);
   if (existing) {
     statusBox.className = 'p-3 rounded-xl border border-amber-500/40 bg-amber-950/40 text-amber-200 text-xs';
-    statusBox.innerHTML = `⭐ Оценка за слёт уже выставлена (K = ${existing.finalScore}). Данные будут загружены для изменения.`;
+    statusBox.innerHTML = `⭐ Оценка за слёт уже выставлена (K = ${existing.finalScore}). Данные загрузятся для изменения.`;
     proceedBtn.innerHTML = `<span>Редактировать</span> <i data-lucide="arrow-right" class="w-4 h-4"></i>`;
   } else {
     statusBox.className = 'p-3 rounded-xl border border-indigo-500/40 bg-indigo-950/40 text-indigo-200 text-xs';
-    statusBox.innerHTML = `Новая аттестация за слёт. Откроется стандартный бланк.`;
+    statusBox.innerHTML = `Новая аттестация за слёт. Откроется пустой бланк.`;
     proceedBtn.innerHTML = `<span>Далее</span> <i data-lucide="arrow-right" class="w-4 h-4"></i>`;
   }
   lucide.createIcons();
@@ -418,7 +428,7 @@ async function saveEvaluation(e) {
   }
 
   await saveRecord('evaluations', evalSessionExistingDocId || null, evalData);
-  showToast("Оценка успешно зафиксирована!", "success");
+  showToast("Оценка сохранена!", "success");
   closeEvaluationModal();
   updateAllViews();
 }
@@ -443,7 +453,7 @@ function deleteCurrentEvaluationFromModal() {
   }
 }
 
-// CRUD Персонала
+// Персонал
 function openStaffModal(staffId = null) {
   document.getElementById('staffEditId').value = staffId || '';
   if (staffId) {
@@ -480,7 +490,7 @@ async function handleStaffSubmit(e) {
 function deleteStaff(staffId) {
   showConfirmDialog({
     title: "Удалить сотрудника?",
-    message: "Человек и вся история его смен будут удалены.",
+    message: "Человек и история его смен будут удалены.",
     onConfirm: async () => {
       await deleteRecord('staff', staffId);
       updateAllViews();
@@ -489,7 +499,7 @@ function deleteStaff(staffId) {
   });
 }
 
-// CRUD Слётов
+// Слёты
 function openCampModal(campId = null) {
   document.getElementById('campEditId').value = campId || '';
   if (campId) {
@@ -535,7 +545,33 @@ function deleteCamp(campId) {
   });
 }
 
-// Экспорт всех методов в глобальную область window.app для предотвращения ошибок вызова из шаблонов
+async function addSelectedStaffToRoster() {
+  const campId = activeRosterCampId;
+  const staffId = document.getElementById('rosterAddStaffSelect').value;
+  if (!campId || !staffId) return;
+
+  const camp = state.camps.find(c => c.id === campId);
+  if (camp && (!camp.roster || !camp.roster.includes(staffId))) {
+    camp.roster = [...(camp.roster || []), staffId];
+    await saveRecord('camps', campId, { roster: camp.roster });
+    renderRosterModalContent(campId);
+    updateAllViews();
+    showToast("Включён в состав слёта!");
+  }
+}
+
+async function removeStaffFromRoster(campId, staffId) {
+  const camp = state.camps.find(c => c.id === campId);
+  if (!camp) return;
+
+  camp.roster = (camp.roster || []).filter(id => id !== staffId);
+  await saveRecord('camps', campId, { roster: camp.roster });
+  renderRosterModalContent(campId);
+  updateAllViews();
+  showToast("Удалён из состава смены", "info");
+}
+
+// Экспорт методов в глобальную область window.app
 window.app = {
   viewDossier,
   closeDossierModal,
@@ -552,5 +588,7 @@ window.app = {
   startEvaluationFlow,
   deleteEvaluation,
   openQrModal,
-  replaceFromReserve
+  replaceFromReserve,
+  deleteSchool,
+  deleteNightShift
 };

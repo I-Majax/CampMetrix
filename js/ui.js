@@ -1,4 +1,4 @@
-import { state, deleteRecord } from './db.js';
+import { state } from './db.js';
 import { 
   calculateStaffMultiCampK, 
   getCampEvaluations, 
@@ -8,12 +8,7 @@ import {
   getWeakestVector 
 } from './calc.js';
 import { ROLE_WEIGHTS } from './config.js';
-import { 
-  calculateGrantKPI, 
-  renderWalkieTalkieList, 
-  renderVolunteerLedgerSummary, 
-  renderSchoolQuotasCheckin 
-} from './grant.js';
+import { calculateGrantKPI, renderSchoolQuotasCheckin } from './grant.js';
 
 let radarChartInstance = null;
 let campRadarChartInstance = null;
@@ -50,17 +45,17 @@ export function showConfirmDialog({ title, message, onConfirm }) {
 }
 
 export function switchTab(tabId) {
-  ['registry', 'camps', 'grant', 'mts'].forEach(id => {
+  // Исключена вкладка mts
+  ['registry', 'camps', 'grant'].forEach(id => {
     document.getElementById(`tab-${id}`)?.classList.toggle('hidden', id !== tabId);
-    document.getElementById(`tabBtn-${id}`)?.classList.toggle('bg-indigo-600', id !== tabId ? false : true);
-    document.getElementById(`tabBtn-${id}`)?.classList.toggle('text-white', id !== tabId ? false : true);
-    document.getElementById(`tabBtn-${id}`)?.classList.toggle('text-slate-400', id !== tabId ? true : false);
+    document.getElementById(`tabBtn-${id}`)?.classList.toggle('bg-indigo-600', id === tabId);
+    document.getElementById(`tabBtn-${id}`)?.classList.toggle('text-white', id === tabId);
+    document.getElementById(`tabBtn-${id}`)?.classList.toggle('text-slate-400', id !== tabId);
   });
 
   if (tabId === 'camps') renderCampsList();
   else if (tabId === 'registry') renderStaffRegistry();
   else if (tabId === 'grant') renderGrantTab();
-  else if (tabId === 'mts') renderMtsTab();
   lucide.createIcons();
 }
 
@@ -185,6 +180,11 @@ export function renderCampsList() {
   if (!container) return;
   container.innerHTML = '';
 
+  if (state.camps.length === 0) {
+    container.innerHTML = '<div class="p-6 text-center text-xs text-slate-500 bg-slate-900/40 rounded-xl col-span-2">Слёты пока не добавлены. Нажмите «Создать новый слёт».</div>';
+    return;
+  }
+
   state.camps.forEach(c => {
     const rosterCount = (Array.isArray(c.roster) ? c.roster : []).length;
     const evals = getCampEvaluations(c.id);
@@ -206,7 +206,7 @@ export function renderCampsList() {
       <div class="flex justify-between items-center text-xs border-t border-slate-700/60 pt-2">
         <span class="text-indigo-400 font-semibold">В составе: ${rosterCount}</span>
         <span class="text-emerald-400 font-semibold">Оценено: ${evals.length}</span>
-        <span class="text-amber-300 font-bold">Ср. балл слёта: ${avg}</span>
+        <span class="text-amber-300 font-bold">Ср. балл: ${avg}</span>
       </div>
       <div class="grid grid-cols-2 gap-2 pt-1">
         <button onclick="window.app.openRosterModal('${c.id}')" class="py-2 bg-indigo-600/20 text-indigo-300 hover:text-white rounded-lg text-xs font-bold border border-indigo-500/30">Состав (${rosterCount})</button>
@@ -220,33 +220,7 @@ export function renderCampsList() {
 export function renderGrantTab() {
   const kpi = calculateGrantKPI();
   document.getElementById('grantKpiValue').textContent = `${kpi.percent}%`;
-  document.getElementById('grantParticipantsTotal').textContent = `${kpi.totalCount} / 240`;
-  renderVolunteerLedgerSummary();
   renderSchoolQuotasCheckin();
-
-  const filterSelect = document.getElementById('grantCampFilterSelect');
-  if (filterSelect) {
-    filterSelect.innerHTML = '<option value="all">Все слёты серии</option>' + state.camps.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-  }
-
-  const container = document.getElementById('grantSquadsProgressList');
-  if (!container) return;
-  container.innerHTML = '';
-
-  [1, 2, 3, 4].forEach(sq => {
-    const card = document.createElement('div');
-    card.className = 'bg-slate-900/80 p-3 rounded-xl border border-slate-700 space-y-1 text-xs';
-    card.innerHTML = `
-      <div class="flex justify-between font-bold text-white"><span>Отряд #${sq}</span><span class="text-emerald-400">72% решено</span></div>
-      <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1"><div class="bg-emerald-500 h-full w-[72%]"></div></div>
-      <p class="text-[10px] text-slate-400 mt-1">Продукт: сдан на 100%</p>
-    `;
-    container.appendChild(card);
-  });
-}
-
-export function renderMtsTab() {
-  renderWalkieTalkieList();
 }
 
 export function viewDossier(staffId) {
@@ -273,17 +247,19 @@ export function viewDossier(staffId) {
 
   document.getElementById('dosDebriefScript').innerHTML = `«Сотрудник ${member.name}. Сильная сторона — <b>${getStrongestVector(m.avgVectors)}</b>. Точка роста — <b>${getWeakestVector(m.avgVectors)}</b>.»`;
 
-  // Очистка предыдущего холста Chart.js
+  // Корректное уничтожение экземпляра Chart.js
+  if (radarChartInstance) {
+    radarChartInstance.destroy();
+    radarChartInstance = null;
+  }
   const canvas = document.getElementById('radarChart');
-  canvas.width = canvas.width;
-  if (radarChartInstance) radarChartInstance.destroy();
 
   radarChartInstance = new Chart(canvas.getContext('2d'), {
     type: 'radar',
     data: {
       labels: ['D', 'A', 'S', 'T', 'F', 'L'],
       datasets: [{
-        label: 'Баллы вожатого',
+        label: 'Баллы',
         data: [m.avgVectors.D, m.avgVectors.A, m.avgVectors.S, m.avgVectors.T, m.avgVectors.F, m.avgVectors.L],
         backgroundColor: 'rgba(99, 102, 241, 0.25)',
         borderColor: '#6366f1'
@@ -297,7 +273,10 @@ export function viewDossier(staffId) {
 }
 
 export function closeDossierModal() {
-  if (radarChartInstance) radarChartInstance.destroy();
+  if (radarChartInstance) {
+    radarChartInstance.destroy();
+    radarChartInstance = null;
+  }
   document.getElementById('dossierModal').classList.add('hidden');
 }
 
@@ -323,16 +302,18 @@ export function viewCampDossier(campId) {
     list.appendChild(row);
   });
 
+  if (campRadarChartInstance) {
+    campRadarChartInstance.destroy();
+    campRadarChartInstance = null;
+  }
   const canvas = document.getElementById('campRadarChart');
-  canvas.width = canvas.width;
-  if (campRadarChartInstance) campRadarChartInstance.destroy();
 
   campRadarChartInstance = new Chart(canvas.getContext('2d'), {
     type: 'radar',
     data: {
       labels: ['D', 'A', 'S', 'T', 'F', 'L'],
       datasets: [{
-        label: 'Командный профиль',
+        label: 'Профиль смены',
         data: [4.2, 4.4, 4.6, 4.1, 4.0, 4.3],
         backgroundColor: 'rgba(168, 85, 247, 0.25)',
         borderColor: '#a855f7'
@@ -346,7 +327,10 @@ export function viewCampDossier(campId) {
 }
 
 export function closeCampDossierModal() {
-  if (campRadarChartInstance) campRadarChartInstance.destroy();
+  if (campRadarChartInstance) {
+    campRadarChartInstance.destroy();
+    campRadarChartInstance = null;
+  }
   document.getElementById('campDossierModal').classList.add('hidden');
 }
 
@@ -380,32 +364,6 @@ export function renderRosterModalContent(campId) {
     list.appendChild(row);
   });
   lucide.createIcons();
-}
-
-export function addSelectedStaffToRoster() {
-  const campId = activeRosterCampId;
-  const staffId = document.getElementById('rosterAddStaffSelect').value;
-  if (!campId || !staffId) return;
-
-  const camp = state.camps.find(c => c.id === campId);
-  if (camp && (!camp.roster || !camp.roster.includes(staffId))) {
-    camp.roster = [...(camp.roster || []), staffId];
-    saveRecord('camps', campId, { roster: camp.roster });
-    renderRosterModalContent(campId);
-    updateAllViews();
-    showToast("Включён в состав слёта!");
-  }
-}
-
-export function removeStaffFromRoster(campId, staffId) {
-  const camp = state.camps.find(c => c.id === campId);
-  if (!camp) return;
-
-  camp.roster = (camp.roster || []).filter(id => id !== staffId);
-  saveRecord('camps', campId, { roster: camp.roster });
-  renderRosterModalContent(campId);
-  updateAllViews();
-  showToast("Удалён из состава смены", "info");
 }
 
 export function openRosterModal(campId) {

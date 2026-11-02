@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>CampMetrix 360° — «Бесконечная история»</title>
+  <title>CampMetrix 360° — Кадровая система слётов</title>
   
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -15,16 +15,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
   <style>
-    html, body {
-      min-height: 100%;
-      background-color: #0b1120;
-      -webkit-tap-highlight-color: transparent;
-    }
-    @media print {
-      .no-print { display: none !important; }
-      .print-only { display: block !important; }
-      body { background: white !important; color: black !important; font-size: 11pt; }
-    }
+    html, body { min-height: 100%; background-color: #0b1120; -webkit-tap-highlight-color: transparent; }
+    @media print { .no-print { display: none !important; } .print-only { display: block !important; } body { background: white !important; color: black !important; font-size: 11pt; } }
     .print-only { display: none; }
     ::-webkit-scrollbar { width: 5px; height: 5px; }
     ::-webkit-scrollbar-track { background: rgba(30, 41, 59, 0.5); }
@@ -36,13 +28,13 @@
 
   <div id="toastContainer" class="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none max-w-sm w-full px-3"></div>
 
-  <!-- Гостевой опрос 360 / Профориентация -->
+  <!-- Гостевой опрос 360° -->
   <div id="guestSurveyView" class="hidden min-h-screen bg-slate-950 p-4 flex flex-col items-center justify-center">
     <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6">
       <div class="text-center space-y-1">
-        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-indigo-600 flex items-center justify-center font-black text-white text-xl mx-auto">CM</div>
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-indigo-600 flex items-center justify-center font-black text-white text-xl mx-auto shadow-lg shadow-indigo-950">CM</div>
         <h2 class="text-xl font-bold text-white pt-2" id="guestSurveyTitle">Анкета слёта</h2>
-        <p class="text-xs text-slate-400" id="guestSurveySubtitle">«Бесконечная история»</p>
+        <p class="text-xs text-slate-400" id="guestSurveySubtitle">Экспресс-отзыв 360°</p>
       </div>
 
       <form id="guestFeedbackForm" class="space-y-4">
@@ -70,9 +62,9 @@
           <div>
             <div class="flex items-center gap-2">
               <h1 class="text-base sm:text-lg font-bold text-white leading-tight">CampMetrix 360°</h1>
-              <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Бесконечная история</span>
+              <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Кадры слётов</span>
             </div>
-            <p class="text-[11px] text-slate-400">Касимовский муниципальный округ</p>
+            <p class="text-[11px] text-slate-400">Управление командой, заездом и оценкой</p>
           </div>
         </div>
 
@@ -89,7 +81,7 @@
       </div>
     </header>
 
-    <!-- Navigation Tabs -->
+    <!-- Navigation Tabs (БЕЗ ВКЛАДКИ МТС) -->
     <nav class="bg-slate-900/60 border-b border-slate-800/80 px-3 sm:px-4 py-2 sticky top-[57px] sm:top-[65px] z-20 backdrop-blur no-print overflow-x-auto">
       <div class="max-w-7xl mx-auto flex items-center justify-between gap-2 text-xs sm:text-sm">
         <div class="flex items-center gap-1.5 whitespace-nowrap">
@@ -100,13 +92,10 @@
             <i data-lucide="tent" class="w-4 h-4"></i> Слёты
           </button>
           <button id="tabBtn-grant" class="tab-btn px-3 py-2 rounded-lg font-semibold transition flex items-center gap-2 text-slate-400 hover:bg-slate-800 hover:text-slate-200">
-            <i data-lucide="file-check" class="w-4 h-4"></i> Грант & Профориентация
-          </button>
-          <button id="tabBtn-mts" class="tab-btn px-3 py-2 rounded-lg font-semibold transition flex items-center gap-2 text-slate-400 hover:bg-slate-800 hover:text-slate-200">
-            <i data-lucide="zap" class="w-4 h-4"></i> МТС & Сеть 3 кВт
+            <i data-lucide="file-check" class="w-4 h-4"></i> Заезд, квоты и аналитика
           </button>
         </div>
-        <button id="btnExportXlsx" class="px-2.5 py-1.5 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 rounded-lg text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap">
+        <button id="btnExportXlsx" class="px-2.5 sm:px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 rounded-lg text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap">
           <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
           <span>XLSX</span>
         </button>
@@ -122,7 +111,7 @@
           <div class="bg-slate-800/70 border border-slate-700/60 rounded-xl p-3 sm:p-4">
             <div class="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase">Оргсостав в базе</div>
             <div class="text-xl sm:text-3xl font-black text-white mt-0.5" id="statTotalStaff">0</div>
-            <div class="text-[11px] text-slate-500">из 18 волонтёров</div>
+            <div class="text-[11px] text-slate-500">человек внесено</div>
           </div>
           <div class="bg-slate-800/70 border border-slate-700/60 rounded-xl p-3 sm:p-4">
             <div class="text-[10px] sm:text-[11px] font-semibold text-amber-400 uppercase">Золотой фонд (K ≥ 4.3)</div>
@@ -130,14 +119,14 @@
             <div class="text-[11px] text-slate-500">ядро наставников</div>
           </div>
           <div class="bg-slate-800/70 border border-slate-700/60 rounded-xl p-3 sm:p-4">
-            <div class="text-[10px] sm:text-[11px] font-semibold text-indigo-400 uppercase">Слётов в серии</div>
+            <div class="text-[10px] sm:text-[11px] font-semibold text-indigo-400 uppercase">Слётов создано</div>
             <div class="text-xl sm:text-3xl font-black text-indigo-300 mt-0.5" id="statTotalCamps">0</div>
-            <div class="text-[11px] text-slate-500">план: 3 выезда</div>
+            <div class="text-[11px] text-slate-500">выездных смен</div>
           </div>
           <div class="bg-slate-800/70 border border-slate-700/60 rounded-xl p-3 sm:p-4">
             <div class="text-[10px] sm:text-[11px] font-semibold text-rose-400 uppercase">Стоп-лист</div>
             <div class="text-xl sm:text-3xl font-black text-rose-400 mt-0.5" id="statStopList">0</div>
-            <div class="text-[11px] text-slate-500">ТБ и режим слёта</div>
+            <div class="text-[11px] text-slate-500">нарушения ТБ и правил</div>
           </div>
         </div>
 
@@ -158,9 +147,9 @@
               <span class="text-slate-400 text-[11px]">Фильтр:</span>
               <select id="roleFilter" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200">
                 <option value="all">Все профили</option>
-                <option value="pedagogical">Вожатые (СПО)</option>
+                <option value="pedagogical">Вожатые</option>
                 <option value="organizer">Организаторы</option>
-                <option value="technical">МТС и Медиа</option>
+                <option value="technical">Техники и Медиа</option>
                 <option value="stop">Стоп-лист</option>
               </select>
             </div>
@@ -206,9 +195,9 @@
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-700/60 pb-3">
             <div>
               <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
-                <i data-lucide="tent" class="text-indigo-400 w-5 h-5"></i> Слёты проекта
+                <i data-lucide="tent" class="text-indigo-400 w-5 h-5"></i> Слёты и смены
               </h2>
-              <p class="text-xs text-slate-400 mt-0.5">Елатьма (Медиа) • Касимов СШ №3 (Вожатые) • Гусь-Железный (Лидер)</p>
+              <p class="text-xs text-slate-400 mt-0.5">Управление составом команд, датами выездов, умным подбором пар и оценками</p>
             </div>
             <button id="btnOpenAddCamp" class="w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-1.5 shadow-sm">
               <i data-lucide="plus" class="w-4 h-4"></i> Создать новый слёт
@@ -218,106 +207,52 @@
         </div>
       </section>
 
-      <!-- TAB 3: GRANT & PROFORIENTATION -->
+      <!-- TAB 3: CHECKIN & ANALYTICS -->
       <section id="tab-grant" class="hidden space-y-4 sm:space-y-6">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div class="bg-slate-800/70 border border-slate-700/60 rounded-xl p-4">
-            <span class="text-[11px] text-slate-400 font-semibold uppercase">Цель Росмолодёжи (KPI)</span>
+            <span class="text-[11px] text-slate-400 font-semibold uppercase">Определились с профессией</span>
             <div class="text-2xl font-black text-emerald-400 mt-1" id="grantKpiValue">0%</div>
-            <p class="text-xs text-slate-400 mt-0.5">План: не менее 60% снижения неопределённости</p>
+            <p class="text-xs text-slate-400 mt-0.5">Доля ответивших «Да» / «Скорее да»</p>
           </div>
           <div class="bg-slate-800/70 border border-slate-700/60 rounded-xl p-4">
-            <span class="text-[11px] text-slate-400 font-semibold uppercase">Охват участников</span>
-            <div class="text-2xl font-black text-indigo-400 mt-1" id="grantParticipantsTotal">0 / 240</div>
-            <p class="text-xs text-slate-400 mt-0.5">3 слёта по 80 школьников 7–11 классов</p>
+            <span class="text-[11px] text-slate-400 font-semibold uppercase">Заехало участников</span>
+            <div class="text-2xl font-black text-indigo-400 mt-1" id="grantParticipantsTotal">0</div>
+            <p class="text-xs text-slate-400 mt-0.5">По всем учтённым школам</p>
           </div>
           <div class="bg-slate-800/70 border border-slate-700/60 rounded-xl p-4">
-            <span class="text-[11px] text-slate-400 font-semibold uppercase">Вклад волонтёров</span>
-            <div class="text-2xl font-black text-amber-300 mt-1" id="grantVolunteersFund">552 861 ₽</div>
-            <p class="text-xs text-slate-400 mt-0.5">Табель софинансирования (50 ч / слёт)</p>
+            <span class="text-[11px] text-slate-400 font-semibold uppercase">Школ с квотами</span>
+            <div class="text-2xl font-black text-amber-300 mt-1" id="grantSchoolsTotal">0</div>
+            <p class="text-xs text-slate-400 mt-0.5">Учреждений в списке</p>
           </div>
         </div>
 
-        <!-- Детализация по отрядам и профориентации -->
-        <div class="bg-slate-800/70 border border-slate-700/60 rounded-xl p-4 sm:p-5 space-y-4">
-          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-700/60 pb-3">
-            <h3 class="font-bold text-white text-base flex items-center gap-2">
-              <i data-lucide="bar-chart-3" class="text-indigo-400 w-5 h-5"></i> Срез профориентационных анкет
-            </h3>
-            <select id="grantCampFilterSelect" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200"></select>
-          </div>
-          <div id="grantSquadsProgressList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"></div>
-        </div>
-
-        <!-- Чек-ин заезда, квоты школ и расселение -->
+        <!-- Управление школами и квотами заезда -->
         <div class="bg-slate-800/70 border border-slate-700/60 rounded-xl p-4 sm:p-5 space-y-4">
           <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-700/60 pb-3">
             <div>
               <h3 class="font-bold text-white text-base flex items-center gap-2">
-                <i data-lucide="clipboard-check" class="text-emerald-400 w-5 h-5"></i> Заезд, квоты школ и ночёвка на матах
+                <i data-lucide="clipboard-check" class="text-emerald-400 w-5 h-5"></i> Квоты направляющих школ и резерв
               </h3>
-              <p class="text-xs text-slate-400 mt-0.5">Раздельное размещение М/Ж в классах и график ночных дежурств</p>
+              <p class="text-xs text-slate-400 mt-0.5">Вносите свои школы, фиксируйте квоты и проводите оперативную замену из резерва</p>
             </div>
-            <button id="btnOpenNightShiftModal" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1.5">
-              <i data-lucide="moon" class="w-4 h-4 text-amber-300"></i> График дежурств
-            </button>
+            <div class="flex items-center gap-2">
+              <button id="btnOpenAddSchoolModal" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5">
+                <i data-lucide="plus" class="w-4 h-4"></i> Добавить школу
+              </button>
+              <button id="btnOpenNightShiftModal" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1.5">
+                <i data-lucide="moon" class="w-4 h-4 text-amber-300"></i> График дежурств
+              </button>
+            </div>
           </div>
           <div id="schoolQuotasCheckinContainer" class="space-y-2"></div>
-        </div>
-      </section>
-
-      <!-- TAB 4: MTS & POWER GRID -->
-      <section id="tab-mts" class="hidden space-y-4 sm:space-y-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- Калькулятор 3 кВт -->
-          <div class="bg-slate-800/70 border border-slate-700/60 rounded-xl p-4 sm:p-5 space-y-3">
-            <div class="flex items-center justify-between border-b border-slate-700/60 pb-2">
-              <h3 class="font-bold text-white text-sm flex items-center gap-2">
-                <i data-lucide="gauge" class="text-amber-400 w-4 h-4"></i> Энергосеть зала (Лимит 3.0 кВт)
-              </h3>
-              <span id="powerTotalBadge" class="text-xs font-bold px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-500/40">2.65 кВт (Норма)</span>
-            </div>
-            <p class="text-xs text-slate-400 leading-relaxed">
-              Защита от выбивания автоматов в сельских школах. Нагрузка строго разносится на 2 силовых контура удлинителями FinePower и TDM.
-            </p>
-            <div class="space-y-2 pt-1 text-xs">
-              <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-700/60">
-                <div class="flex justify-between font-semibold text-slate-200">
-                  <span>Контур 1 (Звук сцены):</span>
-                  <span class="text-indigo-400">1.45 кВт</span>
-                </div>
-                <div class="text-[11px] text-slate-400">2× Behringer B212D (1.1 кВт) + Сабвуфер VQ1500D (350 Вт) + пульт</div>
-              </div>
-              <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-700/60">
-                <div class="flex justify-between font-semibold text-slate-200">
-                  <span>Контур 2 (Свет и пульт):</span>
-                  <span class="text-amber-400">1.20 кВт</span>
-                </div>
-                <div class="text-[11px] text-slate-400">6× Bi Ray PLC006S + 2× Involight MH78W + ЯRILO DMX + Horizont Tab</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Радиосвязь Baofeng -->
-          <div class="bg-slate-800/70 border border-slate-700/60 rounded-xl p-4 sm:p-5 space-y-3">
-            <div class="flex items-center justify-between border-b border-slate-700/60 pb-2">
-              <h3 class="font-bold text-white text-sm flex items-center gap-2">
-                <i data-lucide="radio" class="text-indigo-400 w-4 h-4"></i> Сетка 12 раций Baofeng UV-5R
-              </h3>
-              <span class="text-xs font-bold text-slate-300">10 ЦДО + 2 Грант</span>
-            </div>
-            <p class="text-xs text-slate-400 leading-relaxed">
-              Оперативная связь на слёте без перегруза мобильной сети. Закрепление каналов за службами.
-            </p>
-            <div id="walkieTalkieAllocationList" class="space-y-1.5 max-h-48 overflow-y-auto pr-1 text-xs"></div>
-          </div>
         </div>
       </section>
 
     </main>
   </div>
 
-  <!-- Модальные окна (Мастер оценки, Досье, Слёты, Дежурства) -->
+  <!-- Модальные окна -->
   <div id="modalsContainer">
     <!-- EVALUATION WIZARD MODAL STEP 1 -->
     <div id="evalSelectModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 hidden">
@@ -378,7 +313,7 @@
               <div class="flex items-center justify-between">
                 <div>
                   <div class="text-xs sm:text-sm font-bold text-white">Режим 360° (Куратор 45% + Напарник 30% + Отряд 25%)</div>
-                  <div class="text-[11px] text-slate-400">Авторасчёт по формуле гранта</div>
+                  <div class="text-[11px] text-slate-400">Авторасчёт по формуле взвешивания</div>
                 </div>
                 <label class="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" id="eval360Mode" class="sr-only peer">
@@ -548,21 +483,66 @@
       </div>
     </div>
 
-    <!-- Модалка графика ночных дежурств -->
+    <!-- Модалка добавления школы и квоты (НОВАЯ) -->
+    <div id="schoolModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 hidden">
+      <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+        <div class="flex justify-between items-center border-b border-slate-700 pb-2">
+          <h3 class="text-base font-bold text-white">Добавить школу в квоту заезда</h3>
+          <button id="btnCloseSchoolModal" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <form id="schoolForm" class="space-y-3 text-xs">
+          <div>
+            <label class="block font-medium text-slate-300 mb-1">Название образовательного учреждения *</label>
+            <input type="text" id="schoolNameInput" required placeholder="МОУ «Елатомская СОШ»" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white">
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block font-medium text-slate-300 mb-1">Квота (чел.) *</label>
+              <input type="number" id="schoolQuotaInput" required min="1" max="100" value="20" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white">
+            </div>
+            <div>
+              <label class="block font-medium text-slate-300 mb-1">В резерве (чел.)</label>
+              <input type="number" id="schoolReserveInput" min="0" max="20" value="2" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white">
+            </div>
+          </div>
+          <div>
+            <label class="block font-medium text-slate-300 mb-1">Фактически заехало (чел.)</label>
+            <input type="number" id="schoolArrivedInput" min="0" max="100" value="20" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white">
+          </div>
+          <div class="flex justify-end gap-2 pt-2 border-t border-slate-700">
+            <button type="button" id="btnCancelSchoolModal" class="px-4 py-2 bg-slate-700 text-slate-300 rounded-lg font-medium">Отмена</button>
+            <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-semibold">Сохранить</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Модалка графика ночных дежурств (С РУЧНЫМ ДОБАВЛЕНИЕМ) -->
     <div id="nightShiftModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 hidden">
       <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-lg w-full p-5 space-y-4 shadow-2xl">
         <div class="flex justify-between items-center border-b border-slate-700 pb-3">
           <h3 class="text-base font-bold text-white flex items-center gap-2">
-            <i data-lucide="moon" class="text-amber-300 w-5 h-5"></i> График ночных дежурств на матах
+            <i data-lucide="moon" class="text-amber-300 w-5 h-5"></i> График ночных дежурств на слёте
           </h3>
           <button id="btnCloseNightShiftModal" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
         </div>
-        <p class="text-xs text-slate-400 leading-relaxed">
-          Ночное дежурство несут вожатые отряда и дежурный организатор (п. 2.4 заявки). Раздельные кабинеты мальчиков и девочек.
-        </p>
-        <div id="nightShiftTable" class="space-y-2 max-h-60 overflow-y-auto text-xs"></div>
+        
+        <!-- Форма добавления дежурного -->
+        <form id="addNightShiftForm" class="bg-slate-900/80 p-3 rounded-xl border border-slate-700 space-y-2 text-xs">
+          <div class="font-bold text-indigo-300">Добавить смену дежурства:</div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <input type="text" id="shiftTimeInput" required placeholder="01:00 – 03:00" class="bg-slate-950 border border-slate-700 rounded-lg p-2 text-white">
+            <input type="text" id="shiftLeadInput" required placeholder="ФИО дежурного" class="bg-slate-950 border border-slate-700 rounded-lg p-2 text-white">
+            <input type="text" id="shiftSectorInput" placeholder="Отряды / Зона" class="bg-slate-950 border border-slate-700 rounded-lg p-2 text-white">
+          </div>
+          <div class="flex justify-end">
+            <button type="submit" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold">В график</button>
+          </div>
+        </form>
+
+        <div id="nightShiftTable" class="space-y-1.5 max-h-56 overflow-y-auto text-xs"></div>
         <div class="flex justify-end pt-2 border-t border-slate-700">
-          <button id="btnSaveNightShifts" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold">Сохранить график</button>
+          <button id="btnSaveNightShifts" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-bold">Готово</button>
         </div>
       </div>
     </div>
@@ -576,7 +556,7 @@
         </div>
         <div class="overflow-y-auto touch-scroll p-4 space-y-3 flex-1 text-xs">
           <div class="flex justify-between items-center bg-slate-900/60 p-3 rounded-xl border border-slate-700">
-            <span>Компенсация слабых зон и балансировка опыта СПО / новичков.</span>
+            <span>Автоматический баланс опыта вожатых СПО и новичков.</span>
             <button id="btnRegeneratePairs" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Пересчитать</button>
           </div>
           <div id="pairingCardsContainer" class="space-y-2.5"></div>
@@ -612,7 +592,7 @@
 
     <!-- Модалка сотрудника -->
     <div id="staffModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 hidden">
-      <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-xl">
+      <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-xl">
         <div class="flex justify-between items-center border-b border-slate-700 pb-2">
           <h3 class="text-base font-bold text-white" id="staffModalTitle">Сотрудник оргсостава</h3>
           <button id="btnCloseStaffModal" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
@@ -638,7 +618,7 @@
 
     <!-- Модалка слёта -->
     <div id="campModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 hidden">
-      <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-xl">
+      <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-xl">
         <div class="flex justify-between items-center border-b border-slate-700 pb-2">
           <h3 class="text-base font-bold text-white" id="campModalTitle">Параметры слёта</h3>
           <button id="btnCloseCampModal" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>

@@ -1,48 +1,11 @@
-import { state, saveRecord } from './db.js';
-import { RADIOS_LIST, SQUAD_COLORS, VOLUNTEER_RATES } from './config.js';
-import { showToast } from './ui.js';
+import { state, saveRecord, deleteRecord } from './db.js';
+import { showToast, showConfirmDialog } from './ui.js';
 
-// Инициализация дефолтных демо-данных проекта гранта при пустой базе
-export function initGrantProjectDemo() {
-  if (state.camps.length === 0) {
-    state.camps = [
-      {
-        id: "camp_media",
-        name: "I слёт: Медиа-школа «Кадр года»",
-        location: "МОУ «Елатомская СОШ»",
-        startDate: "2026-12-18",
-        endDate: "2026-12-20",
-        roster: [],
-        quota: 80
-      },
-      {
-        id: "camp_ped",
-        name: "II слёт: Школа вожатых «Красная нить»",
-        location: "МБОУ «Средняя школа №3» г. Касимов",
-        startDate: "2027-03-26",
-        endDate: "2027-03-28",
-        roster: [],
-        quota: 80
-      },
-      {
-        id: "camp_leader",
-        name: "III слёт: Школа личностного развития «Лидер»",
-        location: "МБОУ «Гусевская СОШ»",
-        startDate: "2027-11-05",
-        endDate: "2027-11-07",
-        roster: [],
-        quota: 80
-      }
-    ];
-  }
-}
-
-// Расчёт профориентационного KPI (цель: >= 60%)
+// Вычисление процента определившихся с профессией участников
 export function calculateGrantKPI(campId = 'all') {
-  // Фильтрация анкет
   const surveys = (state.participants || []).filter(p => campId === 'all' || p.campId === campId);
   if (!surveys.length) {
-    return { percent: 68, resolvedCount: 54, totalCount: 80, isMet: true }; // Расчётное значение по заявке
+    return { percent: 0, resolvedCount: 0, totalCount: 0 };
   }
 
   const determined = surveys.filter(s => s.outcome === 'yes' || s.outcome === 'rather_yes');
@@ -50,72 +13,117 @@ export function calculateGrantKPI(campId = 'all') {
   return {
     percent,
     resolvedCount: determined.length,
-    totalCount: surveys.length,
-    isMet: percent >= 60
+    totalCount: surveys.length
   };
 }
 
-// Рендеринг таблицы сетки 12 раций Baofeng UV-5R
-export function renderWalkieTalkieList() {
-  const container = document.getElementById('walkieTalkieAllocationList');
-  if (!container) return;
-  container.innerHTML = '';
-
-  RADIOS_LIST.forEach(radio => {
-    const item = document.createElement('div');
-    item.className = 'flex items-center justify-between p-2 rounded-lg bg-slate-900/80 border border-slate-700/60';
-    item.innerHTML = `
-      <div class="flex items-center gap-2">
-        <span class="w-6 h-6 rounded bg-indigo-600/30 text-indigo-300 font-bold flex items-center justify-center text-[10px]">${radio.id}</span>
-        <div>
-          <div class="font-bold text-white text-xs">${radio.role}</div>
-          <div class="text-[10px] text-slate-400">${radio.channel}</div>
-        </div>
-      </div>
-      <span class="text-[10px] text-emerald-400 font-semibold px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/30">Выдано</span>
-    `;
-    container.appendChild(item);
-  });
-}
-
-// Рендеринг табеля софинансирования волонтёров (552 861 ₽)
-export function renderVolunteerLedgerSummary() {
-  const totalFundElement = document.getElementById('grantVolunteersFund');
-  if (totalFundElement) totalFundElement.textContent = '552 861 ₽';
-}
-
-// Рендеринг чек-ина школ и ротации резерва
+// Отрисовка списка направляющих школ
 export function renderSchoolQuotasCheckin() {
   const container = document.getElementById('schoolQuotasCheckinContainer');
+  const totalArrivedEl = document.getElementById('grantParticipantsTotal');
+  const totalSchoolsEl = document.getElementById('grantSchoolsTotal');
   if (!container) return;
+
   container.innerHTML = '';
+  const schools = state.schools || [];
 
-  const sampleSchools = [
-    { name: "МОУ «Елатомская СОШ»", quota: 20, arrived: 19, reserve: 2 },
-    { name: "МБОУ «Гусевская СОШ»", quota: 15, arrived: 15, reserve: 2 },
-    { name: "МБОУ «Средняя школа №3»", quota: 25, arrived: 23, reserve: 3 },
-    { name: "Школы Касимовского р-на (УОиМП)", quota: 20, arrived: 20, reserve: 4 }
-  ];
+  let totalArrived = 0;
+  schools.forEach(s => totalArrived += Number(s.arrived || 0));
 
-  sampleSchools.forEach((school, idx) => {
+  if (totalArrivedEl) totalArrivedEl.textContent = totalArrived;
+  if (totalSchoolsEl) totalSchoolsEl.textContent = schools.length;
+
+  if (schools.length === 0) {
+    container.innerHTML = '<div class="p-6 text-center text-xs text-slate-500 bg-slate-900/40 rounded-xl">Школы ещё не внесены. Нажмите «Добавить школу», чтобы зафиксировать квоты заезда.</div>';
+    return;
+  }
+
+  schools.forEach(school => {
     const item = document.createElement('div');
     item.className = 'flex flex-wrap items-center justify-between p-3 rounded-xl bg-slate-900/70 border border-slate-700 text-xs gap-2';
     item.innerHTML = `
       <div>
-        <div class="font-bold text-white">${school.name}</div>
-        <div class="text-[11px] text-slate-400">Квота: ${school.quota} чел. • Запасных в резерве: ${school.reserve}</div>
+        <div class="font-bold text-white text-sm">${school.name}</div>
+        <div class="text-[11px] text-slate-400">Квота: ${school.quota} чел. • В резерве: ${school.reserve} чел.</div>
       </div>
       <div class="flex items-center gap-2">
         <span class="px-2.5 py-1 rounded-lg font-bold ${school.arrived < school.quota ? 'bg-amber-950 text-amber-300 border border-amber-500/40' : 'bg-emerald-950 text-emerald-300 border border-emerald-500/40'}">
           Заехало: ${school.arrived} из ${school.quota}
         </span>
-        ${school.arrived < school.quota ? `
-          <button onclick="window.app.replaceFromReserve('${school.name}')" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-[11px] transition">
+        ${school.arrived < school.quota && school.reserve > 0 ? `
+          <button onclick="window.app.replaceFromReserve('${school.id}')" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-[11px] transition">
             + Замена из резерва
           </button>
         ` : ''}
+        <button onclick="window.app.deleteSchool('${school.id}')" class="p-1 rounded bg-rose-950/60 text-rose-300 hover:bg-rose-900 border border-rose-800/40" title="Удалить школу">
+          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+        </button>
       </div>
     `;
     container.appendChild(item);
+  });
+  lucide.createIcons();
+}
+
+// Замена выбывшего участника на резервиста в 1 клик
+export async function replaceFromReserve(schoolId) {
+  const school = (state.schools || []).find(s => s.id === schoolId);
+  if (!school || school.reserve <= 0) return;
+
+  school.arrived = Number(school.arrived || 0) + 1;
+  school.reserve = Number(school.reserve) - 1;
+
+  await saveRecord('schools', schoolId, school);
+  showToast(`Участник из резерва школы «${school.name}» зачислен в отряд!`, 'success');
+  renderSchoolQuotasCheckin();
+}
+
+// Удаление школы
+export function deleteSchool(schoolId) {
+  showConfirmDialog({
+    title: "Удалить школу?",
+    message: "Квоты и список заезда данной школы будут стёрты.",
+    onConfirm: async () => {
+      await deleteRecord('schools', schoolId);
+      showToast("Школа удалена", "info");
+      renderSchoolQuotasCheckin();
+    }
+  });
+}
+
+// Отрисовка графика ночных дежурств
+export function renderNightShiftsList() {
+  const container = document.getElementById('nightShiftTable');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const shifts = state.nightShifts || [];
+  if (shifts.length === 0) {
+    container.innerHTML = '<div class="p-4 text-center text-xs text-slate-500">График дежурств пока пуст. Заполните форму выше.</div>';
+    return;
+  }
+
+  shifts.forEach(shift => {
+    const item = document.createElement('div');
+    item.className = 'flex justify-between items-center p-2 rounded bg-slate-900 border border-slate-700 text-xs';
+    item.innerHTML = `
+      <div class="flex items-center gap-2">
+        <span class="font-bold text-amber-300">${shift.time}</span>
+        <span class="text-white font-medium">${shift.lead}</span>
+        <span class="text-slate-400">(${shift.sector || 'Все отряды'})</span>
+      </div>
+      <button onclick="window.app.deleteNightShift('${shift.id}')" class="text-rose-400 hover:text-rose-300 p-1">
+        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+      </button>
+    `;
+    container.appendChild(item);
+  });
+  lucide.createIcons();
+}
+
+export function deleteNightShift(shiftId) {
+  deleteRecord('nightShifts', shiftId).then(() => {
+    renderNightShiftsList();
+    showToast("Смена дежурства удалена", "info");
   });
 }
