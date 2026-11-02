@@ -1,16 +1,17 @@
 import { calculateStaffMultiCampK, getCampEvaluations, formatCampDateRange, getCategoryBadge } from './calc.js';
 import { ROLE_WEIGHTS } from './config.js';
 import { showToast } from './ui.js';
+import { state } from './db.js';
 
 export function exportXLSX(staffList, campsList, evaluationsList) {
-  if (staffList.length === 0) {
+  if (staffList.length === 0 && campsList.length === 0) {
     showToast("Нет данных для экспорта", "error");
     return;
   }
 
   const wb = XLSX.utils.book_new();
 
-  // Лист 1: Реестр оргсостава
+  // Лист 1: Реестр команды
   const staffRows = staffList.map(s => {
     const m = calculateStaffMultiCampK(s.id);
     const badge = getCategoryBadge(m);
@@ -25,12 +26,12 @@ export function exportXLSX(staffList, campsList, evaluationsList) {
       "Технический K": m.techK !== null ? Number(m.techK) : "",
       "Итоговый K-индекс": m.isStopListed ? 0 : Number(m.overallK) || 0,
       "Тренд": m.trend,
-      "Статус": badge.label
+      "Категория": badge.label
     };
   });
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(staffRows), "Реестр команды");
 
-  // Лист 2: Оценки слётов
+  // Лист 2: Оценки слётов 360°
   const evalRows = evaluationsList.map(e => {
     const staff = staffList.find(s => s.id === e.staffId);
     const camp = campsList.find(c => c.id === e.campId);
@@ -38,7 +39,7 @@ export function exportXLSX(staffList, campsList, evaluationsList) {
       "Сотрудник": staff ? (staff.name || "Без имени") : e.staffId,
       "Слёт": camp ? camp.name : e.campId,
       "Роль": ROLE_WEIGHTS[e.role]?.label || e.role,
-      "Оценка K": Number(e.finalScore) || 0,
+      "Итоговый балл K": Number(e.finalScore) || 0,
       "D (Тайминг)": Number(e.vectors?.D) || 0,
       "A (Аудитория)": Number(e.vectors?.A) || 0,
       "S (Безопасность)": Number(e.vectors?.S) || 0,
@@ -48,18 +49,20 @@ export function exportXLSX(staffList, campsList, evaluationsList) {
       "Режим 360°": e.is360 ? "Да" : "Нет"
     };
   });
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(evalRows), "Оценки 360°");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(evalRows), "Оценки слётов");
 
-  // Лист 3: Волонтёрский вклад (Софинансирование 552 861 ₽)
-  const volRows = [
-    { "Статья софинансирования": "Вожатые на отрядах (8 чел)", "Часов на слёт": 50, "Слётов": 3, "Сумма вклада": 244140 },
-    { "Статья софинансирования": "Медиа-служба / Фото-видео (2 чел)", "Часов на слёт": 50, "Слётов": 3, "Сумма вклада": 176250 },
-    { "Статья софинансирования": "Техническая служба МТС (1 чел)", "Часов на слёт": 50, "Слётов": 3, "Сумма вклада": 52368 },
-    { "Статья софинансирования": "Дизайнер полиграфии и бейджей", "Часов на слёт": 5, "Слётов": 3, "Сумма вклада": 4503 },
-    { "Статья софинансирования": "Оборудование команды (ноутбук, камеры)", "Часов на слёт": "—", "Слётов": 3, "Сумма вклада": 75600 },
-    { "ИТОГО СОБСТВЕННЫЙ ВКЛАД": "Грантовый проект «Бесконечная история»", "Часов на слёт": "—", "Слётов": 3, "Сумма вклада": 552861 }
-  ];
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(volRows), "Табель софинансирования");
+  // Лист 3: Реальные квоты школ и фактический заезд (вместо старого МТС)
+  const schoolRows = (state.schools || []).map(school => ({
+    "Образовательное учреждение": school.name,
+    "Выделенная квота (чел)": Number(school.quota) || 0,
+    "Фактически заехало (чел)": Number(school.arrived) || 0,
+    "Остаток в резерве (чел)": Number(school.reserve) || 0,
+    "Статус заполнения": (school.arrived >= school.quota) ? "Квота закрыта" : "Недобор"
+  }));
+  
+  if (schoolRows.length > 0) {
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(schoolRows), "Квоты школ и заезд");
+  }
 
   XLSX.writeFile(wb, `CampMetrix_Report_${new Date().toISOString().slice(0, 10)}.xlsx`);
   showToast("Отчёт выгружен в Excel!", "success");

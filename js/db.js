@@ -7,6 +7,7 @@ export const state = {
   camps: [],
   evaluations: [],
   participants: [],
+  schools: [],
   nightShifts: []
 };
 
@@ -27,11 +28,13 @@ export const storage = {
 };
 
 export function initStorageAndFirebase(onUpdate, onStatusChange) {
+  // Загрузка всех списков из локального хранилища
   state.staff = storage.get('cm_cached_staff', []);
   state.camps = storage.get('cm_cached_camps', []);
   state.evaluations = storage.get('cm_cached_evals', []);
   state.participants = storage.get('cm_cached_parts', []);
-  state.nightShifts = storage.get('cm_cached_night', []);
+  state.schools = storage.get('cm_cached_schools', []);
+  state.nightShifts = storage.get('cm_cached_nightShifts', []);
   onUpdate();
 
   try {
@@ -41,38 +44,49 @@ export function initStorageAndFirebase(onUpdate, onStatusChange) {
     db = firebase.firestore();
     onStatusChange(true);
 
+    // Подписки Firestore
     db.collection('camps').onSnapshot(snap => {
       const remote = [];
       snap.forEach(doc => remote.push({ id: doc.id, ...doc.data() }));
-      if (remote.length > 0 || state.camps.length === 0) {
-        state.camps = remote;
-        storage.set('cm_cached_camps', state.camps);
-      }
+      state.camps = remote;
+      storage.set('cm_cached_camps', state.camps);
       onUpdate();
     }, err => console.warn(err));
 
     db.collection('staff').onSnapshot(snap => {
       const remote = [];
       snap.forEach(doc => remote.push({ id: doc.id, ...doc.data() }));
-      if (remote.length > 0 || state.staff.length === 0) {
-        state.staff = remote;
-        storage.set('cm_cached_staff', state.staff);
-      }
+      state.staff = remote;
+      storage.set('cm_cached_staff', state.staff);
       onUpdate();
     }, err => console.warn(err));
 
     db.collection('evaluations').onSnapshot(snap => {
       const remote = [];
       snap.forEach(doc => remote.push({ id: doc.id, ...doc.data() }));
-      if (remote.length > 0 || state.evaluations.length === 0) {
-        state.evaluations = remote;
-        storage.set('cm_cached_evals', state.evaluations);
-      }
+      state.evaluations = remote;
+      storage.set('cm_cached_evals', state.evaluations);
+      onUpdate();
+    }, err => console.warn(err));
+
+    db.collection('schools').onSnapshot(snap => {
+      const remote = [];
+      snap.forEach(doc => remote.push({ id: doc.id, ...doc.data() }));
+      state.schools = remote;
+      storage.set('cm_cached_schools', state.schools);
+      onUpdate();
+    }, err => console.warn(err));
+
+    db.collection('nightShifts').onSnapshot(snap => {
+      const remote = [];
+      snap.forEach(doc => remote.push({ id: doc.id, ...doc.data() }));
+      state.nightShifts = remote;
+      storage.set('cm_cached_nightShifts', state.nightShifts);
       onUpdate();
     }, err => console.warn(err));
 
   } catch (err) {
-    console.warn("Локальный режим:", err);
+    console.warn("Локальный режим базы данных:", err);
     onStatusChange(false);
   }
 }
